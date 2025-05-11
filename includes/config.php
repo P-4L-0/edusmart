@@ -8,7 +8,7 @@ define('BASE_PATH', __DIR__ . '/');
 
 // Configuración de la aplicación
 define('APP_NAME', 'SmartEdu');
-define('APP_URL', 'http://localhost/smartedu');
+define('APP_URL', 'http://localhost/smarteduv2');
 
 // Iniciar sesión
 session_start();

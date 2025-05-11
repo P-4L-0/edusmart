@@ -142,8 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: usuarios.php");
         exit;
     }
-} elseif (isset($_GET['eliminar'])) {
-    $usuario_id = intval($_GET['eliminar']);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['eliminar_usuario'])) {
+    $usuario_id = intval($_POST['eliminar_usuario']);
+        echo "Intentando eliminar usuario con ID: $usuario_id<br>";
 
     try {
         $db->beginTransaction();
@@ -152,20 +153,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
         $db->bind(':maestro_id', $usuario_id);
         $db->execute();
+        echo "Asignaciones de materias eliminadas para el usuario con ID: $usuario_id<br>";
 
         // Eliminar el usuario
         $db->query("DELETE FROM usuarios WHERE id = :id");
         $db->bind(':id', $usuario_id);
         $db->execute();
+        echo "Usuario eliminado con ID: $usuario_id<br>";
 
         $db->commit();
         $_SESSION['success'] = "Usuario eliminado correctamente";
     } catch (Exception $e) {
         $db->rollBack();
+        echo "Error al eliminar usuario: " . $e->getMessage() . "<br>";
         $_SESSION['error'] = "Error al eliminar usuario: " . $e->getMessage();
     }
 
-    header("Location: usuarios.php");
     exit;
 }
 
@@ -293,11 +296,13 @@ function generarPassword($longitud = 10)
                                         <i class="fas fa-edit mr-1"></i> Editar
                                     </button>
                                     <?php if ($usuario->activo): ?>
-                                        <a href="usuarios.php?eliminar=<?= $usuario->id ?>"
-                                            class="text-red-500 hover:text-red-700"
-                                            onclick="return confirm('¿Desactivar este usuario?')">
-                                            <i class="fas fa-times-circle mr-1"></i> Desactivar
-                                        </a>
+                                        <form method="POST" action="usuarios.php" class="inline-block"
+                                            onsubmit="return confirm('¿Estás seguro de que deseas eliminar este usuario?');">
+                                            <input type="hidden" name="eliminar_usuario" value="<?= $usuario->id ?>">
+                                            <button type="submit" class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times-circle mr-1"></i> Eliminar
+                                            </button>
+                                        </form>
                                     <?php else: ?>
                                         <a href="activar_usuario.php?id=<?= $usuario->id ?>"
                                             class="text-green-500 hover:text-green-700">
@@ -538,54 +543,54 @@ function generarPassword($longitud = 10)
         }
 
         function cargarMateriasMaestro(maestroId) {
-    fetch(`obtener_materias_maestro.php?id=${maestroId}`)
-        .then(response => response.json())
-        .then(materias => {
-            console.log('Materias cargadas:', materias); // Depuración
-            const container = document.getElementById('edit-materias-list');
-            container.innerHTML = ''; // Limpiar el contenedor antes de agregar nuevas materias
+            fetch(`obtener_materias_maestro.php?id=${maestroId}`)
+                .then(response => response.json())
+                .then(materias => {
+                    console.log('Materias cargadas:', materias); // Depuración
+                    const container = document.getElementById('edit-materias-list');
+                    container.innerHTML = ''; // Limpiar el contenedor antes de agregar nuevas materias
 
-            if (materias.length === 0) {
-                container.innerHTML = '<p class="text-gray-500">No hay materias disponibles.</p>';
-                return;
-            }
+                    if (materias.length === 0) {
+                        container.innerHTML = '<p class="text-gray-500">No hay materias disponibles.</p>';
+                        return;
+                    }
 
-            materias.forEach(materia => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center';
+                    materias.forEach(materia => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center';
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `edit_materia_${materia.id}`;
-                checkbox.name = 'materias_id[]';
-                checkbox.value = materia.id;
-                checkbox.className = 'mr-2';
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = `edit_materia_${materia.id}`;
+                        checkbox.name = 'materias_id[]';
+                        checkbox.value = materia.id;
+                        checkbox.className = 'mr-2';
 
-                // Evaluar explícitamente si la materia está asignada
-                if (materia.asignada === 1 || materia.asignada === "1" || materia.asignada === true) {
-                    checkbox.checked = true;
-                } else {
-                    checkbox.checked = false;
-                }
+                        // Evaluar explícitamente si la materia está asignada
+                        if (materia.asignada === 1 || materia.asignada === "1" || materia.asignada === true) {
+                            checkbox.checked = true;
+                        } else {
+                            checkbox.checked = false;
+                        }
 
-                // Agregar evento para manejar cambios
-                checkbox.addEventListener('change', () => {
-                    actualizarAsignacionMateria(maestroId, materia.id, checkbox.checked);
+                        // Agregar evento para manejar cambios
+                        checkbox.addEventListener('change', () => {
+                            actualizarAsignacionMateria(maestroId, materia.id, checkbox.checked);
+                        });
+
+                        const label = document.createElement('label');
+                        label.htmlFor = `edit_materia_${materia.id}`;
+                        label.textContent = materia.nombre;
+
+                        div.appendChild(checkbox);
+                        div.appendChild(label);
+                        container.appendChild(div);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar materias del maestro:', error);
                 });
-
-                const label = document.createElement('label');
-                label.htmlFor = `edit_materia_${materia.id}`;
-                label.textContent = materia.nombre;
-
-                div.appendChild(checkbox);
-                div.appendChild(label);
-                container.appendChild(div);
-            });
-        })
-        .catch(error => {
-            console.error('Error al cargar materias del maestro:', error);
-        });
-}
+        }
 
         function actualizarAsignacionMateria(maestroId, materiaId, asignar) {
             fetch('actualizar_asignacion_materia.php', {
