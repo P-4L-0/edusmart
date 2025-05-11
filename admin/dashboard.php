@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-protegerPagina([1]); // Solo admin
+protegerPagina([1]);
 ?>
 
 <!DOCTYPE html>
