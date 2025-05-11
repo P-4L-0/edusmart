@@ -1,6 +1,6 @@
 # SmartEdu
 
-SmartEdu es una plataforma de gestión educativa diseñada para facilitar la administración de usuarios, grupos, materias y actividades.
+SmartEdu es una plataforma de gestión educativa diseñada para facilitar la administración de la institucion.
 
 ## Requisitos
 
@@ -23,10 +23,11 @@ SmartEdu es una plataforma de gestión educativa diseñada para facilitar la adm
     mysql -u usuario -p base_de_datos < sql/estructura.sql
 5. Asegúrate de que las carpetas necesarias tengan permisos de escritura si es requerido.
 
-Licencia
+## Licencia
+
 Este proyecto está licenciado bajo la MIT License.
 
-Créditos
+## Créditos
 
     -PhpSpreadsheet: Para la gestión de hojas de cálculo.
     -TCPDF: Para la generación de PDFs.
