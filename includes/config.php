@@ -4,6 +4,7 @@ define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'smartedu');
+define('BASE_PATH', __DIR__ . '/');
 
 // Configuración de la aplicación
 define('APP_NAME', 'SmartEdu');

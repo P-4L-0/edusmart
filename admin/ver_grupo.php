@@ -1,5 +1,5 @@
 <?php
-require_once 'D:\xampp\htdocs\smartedu\includes\config.php';
+require_once __DIR__ . '/../includes/config.php';
 protegerPagina([1]); // Solo admin
 
 $db = new Database();
@@ -359,7 +359,7 @@ $maestros = $db->resultSet();
             body: formData
         })
         .then(response => response.json())
-        .then(data => {
+        .then data => {
             if (data.success) {
                 location.reload();
             } else {

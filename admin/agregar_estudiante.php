@@ -1,5 +1,5 @@
 <?php
-require_once 'D:\xampp\htdocs\smartedu\includes\config.php';
+require_once __DIR__ . '/../includes/config.php';
 protegerPagina([1]);
 
 header('Content-Type: application/json');
