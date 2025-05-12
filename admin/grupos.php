@@ -1,33 +1,40 @@
 <?php
+// Incluir el archivo de configuración para acceder a las configuraciones globales y proteger la página
 require_once __DIR__ . '/../includes/config.php';
-protegerPagina([1]); // Solo admin
+protegerPagina([1]); // Solo administradores
 
+// Crear una instancia de la base de datos
 $db = new Database();
 
 // Operaciones CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['crear_grupo'])) {
-        $nombre = trim($_POST['nombre']);
-        $grado = trim($_POST['grado']);
-        $ciclo_escolar = trim($_POST['ciclo_escolar']);
+        // Crear un nuevo grupo
+        $nombre = trim($_POST['nombre']); // Nombre del grupo
+        $grado = trim($_POST['grado']); // Grado del grupo
+        $ciclo_escolar = trim($_POST['ciclo_escolar']); // Ciclo escolar del grupo
 
+        // Preparar la consulta para insertar un nuevo grupo
         $db->query("INSERT INTO grupos (nombre, grado, ciclo_escolar) VALUES (:nombre, :grado, :ciclo)");
         $db->bind(':nombre', $nombre);
         $db->bind(':grado', $grado);
         $db->bind(':ciclo', $ciclo_escolar);
 
+        // Ejecutar la consulta y redirigir si es exitosa
         if ($db->execute()) {
             $_SESSION['success'] = "Grupo creado correctamente";
             header("Location: grupos.php");
             exit;
         }
     } elseif (isset($_POST['editar_grupo'])) {
-        $id = intval($_POST['id']);
-        $nombre = trim($_POST['nombre']);
-        $grado = trim($_POST['grado']);
-        $ciclo_escolar = trim($_POST['ciclo_escolar']);
-        $maestro_id = !empty($_POST['maestro_id']) ? intval($_POST['maestro_id']) : null;
+        // Editar un grupo existente
+        $id = intval($_POST['id']); // ID del grupo
+        $nombre = trim($_POST['nombre']); // Nombre del grupo
+        $grado = trim($_POST['grado']); // Grado del grupo
+        $ciclo_escolar = trim($_POST['ciclo_escolar']); // Ciclo escolar del grupo
+        $maestro_id = !empty($_POST['maestro_id']) ? intval($_POST['maestro_id']) : null; // Maestro asignado (puede ser null)
 
+        // Preparar la consulta para actualizar el grupo
         $db->query("UPDATE grupos SET 
                    nombre = :nombre,
                    grado = :grado,
@@ -40,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->bind(':maestro_id', $maestro_id);
         $db->bind(':id', $id);
 
+        // Ejecutar la consulta y redirigir si es exitosa
         if ($db->execute()) {
             $_SESSION['success'] = "Grupo actualizado correctamente";
             header("Location: grupos.php");
@@ -47,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 } elseif (isset($_GET['eliminar'])) {
-    $id = intval($_GET['eliminar']);
+    // Eliminar un grupo
+    $id = intval($_GET['eliminar']); // ID del grupo a eliminar
 
     // Verificar que el grupo no tenga estudiantes antes de eliminar
     $db->query("SELECT COUNT(*) as total FROM estudiantes WHERE grupo_id = :id");
@@ -55,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $db->single();
 
     if ($result->total == 0) {
+        // Si no tiene estudiantes, eliminar el grupo
         $db->query("DELETE FROM grupos WHERE id = :id");
         $db->bind(':id', $id);
 
@@ -62,14 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['success'] = "Grupo eliminado correctamente";
         }
     } else {
+        // Si tiene estudiantes, mostrar un mensaje de error
         $_SESSION['error'] = "No se puede eliminar, el grupo tiene estudiantes asignados";
     }
 
+    // Redirigir a la página de grupos
     header("Location: grupos.php");
     exit;
 }
 
-// Obtener datos
+// Obtener datos de los grupos y maestros
 $db->query("SELECT g.*, u.nombre_completo as maestro FROM grupos g LEFT JOIN usuarios u ON g.maestro_id = u.id ORDER BY g.grado, g.nombre");
 $grupos = $db->resultSet();
 

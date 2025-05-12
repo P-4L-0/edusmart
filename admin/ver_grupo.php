@@ -1,7 +1,9 @@
 <?php
+// Incluir el archivo de configuración para acceder a las configuraciones globales y proteger la página
 require_once __DIR__ . '/../includes/config.php';
 protegerPagina([1]); // Solo admin
 
+// Crear una instancia de la base de datos
 $db = new Database();
 
 // Obtener ID del grupo desde la URL
@@ -16,6 +18,7 @@ $db->bind(':id', $grupo_id);
 $grupo = $db->single();
 
 if (!$grupo) {
+    // Si no se encuentra el grupo, redirigir con un mensaje de error
     $_SESSION['error'] = "Grupo no encontrado";
     header("Location: grupos.php");
     exit;
@@ -44,8 +47,10 @@ $maestros = $db->resultSet();
 </head>
 <body class="bg-gray-100">
     <div class="flex">
+        <!-- Sidebar -->
         <?php include './partials/sidebar.php'; ?>
         
+        <!-- Contenido principal -->
         <div class="flex-1 p-8">
             <!-- Encabezado con información del grupo -->
             <div class="flex justify-between items-start mb-6">

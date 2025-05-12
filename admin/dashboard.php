@@ -1,49 +1,63 @@
 <?php
+// Incluir el archivo de configuración para acceder a las configuraciones globales y proteger la página
 require_once __DIR__ . '/../includes/config.php';
-protegerPagina([1]);
+protegerPagina([1]); // Solo administradores
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Metadatos básicos -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - <?php echo APP_NAME; ?></title>
+    <!-- Incluir Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
     <div class="flex">
         <!-- Sidebar -->
         <div class="bg-blue-800 text-white w-64 min-h-screen p-4">
+            <!-- Título del sidebar -->
             <h1 class="text-2xl font-bold mb-6"><?php echo APP_NAME; ?></h1>
+            <!-- Mensaje de bienvenida -->
             <p class="text-blue-200 mb-6">Bienvenido, <?php echo $_SESSION['nombre']; ?></p>
             
+            <!-- Navegación del sidebar -->
             <nav>
                 <ul class="space-y-2">
+                    <!-- Enlace al Dashboard -->
                     <li>
                         <a href="dashboard.php" class="block px-4 py-2 rounded-lg bg-blue-700">Dashboard</a>
                     </li>
+                    <!-- Enlace a la gestión de usuarios -->
                     <li>
                         <a href="usuarios.php" class="block px-4 py-2 rounded-lg hover:bg-blue-700">Usuarios</a>
                     </li>
+                    <!-- Enlace a la gestión de materias -->
                     <li>
                         <a href="materias.php" class="block px-4 py-2 rounded-lg hover:bg-blue-700">Materias</a>
                     </li>
+                    <!-- Enlace a la gestión de grupos -->
                     <li>
                         <a href="grupos.php" class="block px-4 py-2 rounded-lg hover:bg-blue-700">Grupos</a>
                     </li>
+                    <!-- Enlace para cerrar sesión -->
                     <li>
-                        <a href="D:\xampp\htdocs\smartedu\logout.php" class="block px-4 py-2 rounded-lg hover:bg-red-700">Cerrar Sesión</a>
+                        <a href="<?php echo APP_URL; ?>/logout.php" class="block px-4 py-2 rounded-lg hover:bg-red-700">Cerrar Sesión</a>
                     </li>
                 </ul>
             </nav>
         </div>
         
-        <!-- Main Content -->
+        <!-- Contenido principal -->
         <div class="flex-1 p-8">
+            <!-- Título del panel -->
             <h2 class="text-3xl font-bold mb-6">Panel de Administración</h2>
             
+            <!-- Tarjetas de estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Total de usuarios -->
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-xl font-semibold mb-2">Total Usuarios</h3>
                     <?php
@@ -54,6 +68,7 @@ protegerPagina([1]);
                     <p class="text-3xl font-bold"><?php echo $result->total; ?></p>
                 </div>
                 
+                <!-- Total de maestros -->
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-xl font-semibold mb-2">Total Maestros</h3>
                     <?php
@@ -63,6 +78,7 @@ protegerPagina([1]);
                     <p class="text-3xl font-bold"><?php echo $result->total; ?></p>
                 </div>
                 
+                <!-- Total de rectores -->
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-xl font-semibold mb-2">Total Rectores</h3>
                     <?php
@@ -73,6 +89,7 @@ protegerPagina([1]);
                 </div>
             </div>
             
+            <!-- Tabla de últimos usuarios registrados -->
             <div class="bg-white p-6 rounded-lg shadow">
                 <h3 class="text-xl font-semibold mb-4">Últimos usuarios registrados</h3>
                 <?php

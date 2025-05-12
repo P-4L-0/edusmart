@@ -1,11 +1,15 @@
 <?php
+// Incluir el archivo de configuración y funciones para acceder a las configuraciones globales y proteger la página
 require_once __DIR__ . '/../includes/config.php';
 require_once BASE_PATH . 'functions.php';
+
 if (!function_exists('generarUsername') || !function_exists('generarPassword')) {
     die("Error: Funciones esenciales no disponibles");
 }
+
 protegerPagina([1]); // Solo admin
 
+// Crear una instancia de la base de datos
 $db = new Database();
 
 // Obtener datos necesarios
@@ -24,10 +28,11 @@ if ($credencialesMostrar) {
 // Operaciones CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['crear_usuario'])) {
+        // Crear un nuevo usuario
         $nombre_completo = trim($_POST['nombre_completo']);
         $fecha_nacimiento = trim($_POST['fecha_nacimiento']);
         $rol_id = intval($_POST['rol_id']);
-        $materia_id = ($rol_id == 3 && isset($_POST['materia_id'])) ? intval($_POST['materia_id']) : null;
+        $materias_id = ($rol_id == 3 && isset($_POST['materias_id'])) ? $_POST['materias_id'] : [];
 
         // Generar username automático
         $username = generarUsername($nombre_completo, $db);
@@ -39,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $db->beginTransaction();
 
-            // Crear usuario
+            // Insertar usuario en la base de datos
             $db->query("INSERT INTO usuarios (nombre_completo, fecha_nacimiento, username, password, rol_id, activo) 
                        VALUES (:nombre, :fecha, :username, :password, :rol_id, 1)");
             $db->bind(':nombre', $nombre_completo);
@@ -47,18 +52,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->bind(':username', $username);
             $db->bind(':password', $hashed_password);
             $db->bind(':rol_id', $rol_id);
-
             $db->execute();
+
             $usuario_id = $db->lastInsertId();
 
-            // Si es maestro, asignar materia
-// En la sección de creación de usuario, cambiar la asignación de materia por:
-            if ($rol_id == 3 && !empty($_POST['materias_id'])) {
-                foreach ($_POST['materias_id'] as $materia_id) {
+            // Si es maestro, asignar materias
+            if ($rol_id == 3 && !empty($materias_id)) {
+                foreach ($materias_id as $materia_id) {
                     $materia_id = intval($materia_id);
                     if ($materia_id > 0) {
                         $db->query("INSERT INTO maestros_materias (maestro_id, materia_id) 
-                       VALUES (:maestro_id, :materia_id)");
+                                   VALUES (:maestro_id, :materia_id)");
                         $db->bind(':maestro_id', $usuario_id);
                         $db->bind(':materia_id', $materia_id);
                         $db->execute();
@@ -87,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 } elseif (isset($_POST['editar_usuario'])) {
+    // Editar un usuario existente
     $usuario_id = intval($_POST['id']);
     $nombre_completo = trim($_POST['nombre_completo']);
     $fecha_nacimiento = trim($_POST['fecha_nacimiento']);
@@ -111,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->bind(':id', $usuario_id);
         $db->execute();
 
-        // Solo si es maestro, actualizar materias
+        // Si es maestro, actualizar materias
         if ($rol_id == 3) {
             // Eliminar asignaciones actuales
             $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
@@ -143,8 +148,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['eliminar_usuario'])) {
+    // Eliminar un usuario
     $usuario_id = intval($_POST['eliminar_usuario']);
-        echo "Intentando eliminar usuario con ID: $usuario_id<br>";
 
     try {
         $db->beginTransaction();
@@ -153,65 +158,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
         $db->bind(':maestro_id', $usuario_id);
         $db->execute();
-        echo "Asignaciones de materias eliminadas para el usuario con ID: $usuario_id<br>";
 
         // Eliminar el usuario
         $db->query("DELETE FROM usuarios WHERE id = :id");
         $db->bind(':id', $usuario_id);
         $db->execute();
-        echo "Usuario eliminado con ID: $usuario_id<br>";
 
         $db->commit();
         $_SESSION['success'] = "Usuario eliminado correctamente";
     } catch (Exception $e) {
         $db->rollBack();
-        echo "Error al eliminar usuario: " . $e->getMessage() . "<br>";
         $_SESSION['error'] = "Error al eliminar usuario: " . $e->getMessage();
     }
 
+    header("Location: usuarios.php");
     exit;
 }
 
 // Obtener lista de usuarios
 $db->query("SELECT u.*, r.nombre as rol FROM usuarios u JOIN roles r ON u.rol_id = r.id ORDER BY u.activo DESC, u.nombre_completo");
 $usuarios = $db->resultSet();
-
-// Funciones auxiliares
-function generarUsername($nombre_completo, $db)
-{
-    $iniciales = '';
-    $partes_nombre = explode(' ', $nombre_completo);
-    foreach ($partes_nombre as $parte) {
-        if (!empty($parte)) {
-            $iniciales .= strtolower(substr($parte, 0, 1));
-        }
-    }
-    $base_username = $iniciales . date('y');
-    $username = $base_username;
-    $contador = 1;
-
-    // Verificar si el username ya existe
-    $db->query("SELECT id FROM usuarios WHERE username = :username");
-    $db->bind(':username', $username);
-    while ($db->single()) {
-        $username = $base_username . $contador;
-        $contador++;
-        $db->bind(':username', $username);
-    }
-
-    return $username;
-}
-
-function generarPassword($longitud = 10)
-{
-    $caracteres = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
-    $password = '';
-    $max = strlen($caracteres) - 1;
-    for ($i = 0; $i < $longitud; $i++) {
-        $password .= $caracteres[random_int(0, $max)];
-    }
-    return $password;
-}
 ?>
 
 <!DOCTYPE html>
@@ -445,7 +411,6 @@ function generarPassword($longitud = 10)
     </div>
 
     <script>
-        // Función para abrir el modal de creación
         // Función para abrir el modal de creación
         function abrirModalCrear() {
             const modalCrear = document.getElementById('modal-crear');

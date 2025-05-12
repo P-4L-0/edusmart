@@ -1,18 +1,23 @@
 <?php
+// Incluir el archivo de configuración para acceder a las configuraciones globales y proteger la página
 require_once __DIR__ . '/../includes/config.php';
 protegerPagina([1]); // Solo admin
 
 // Procesar formulario de creación de materia
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nombre = trim($_POST['nombre']);
-    $descripcion = trim($_POST['descripcion']);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $nombre = trim($_POST['nombre']); // Nombre de la materia
+    $descripcion = trim($_POST['descripcion']); // Descripción de la materia
     
+    // Crear una instancia de la base de datos
     $db = new Database();
+    
+    // Preparar la consulta para insertar una nueva materia
     $db->query("INSERT INTO materias (nombre, descripcion) VALUES (:nombre, :descripcion)");
     $db->bind(':nombre', $nombre);
     $db->bind(':descripcion', $descripcion);
     
-    if($db->execute()) {
+    // Ejecutar la consulta y verificar si fue exitosa
+    if ($db->execute()) {
         $_SESSION['success'] = "Materia creada exitosamente";
         header('Location: materias.php');
         exit;
@@ -37,20 +42,21 @@ $materias = $db->resultSet();
 </head>
 <body class="bg-gray-100">
     <div class="flex">
-        <!-- Sidebar (repetir el mismo de dashboard.php) -->
+        <!-- Sidebar (reutilizado de dashboard.php) -->
         <?php include './partials/sidebar.php'; ?>
         
-        <!-- Main Content -->
+        <!-- Contenido principal -->
         <div class="flex-1 p-8">
             <h2 class="text-3xl font-bold mb-6">Gestión de Materias</h2>
             
-            <?php if(isset($error)): ?>
+            <!-- Mostrar mensajes de error o éxito -->
+            <?php if (isset($error)): ?>
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     <?php echo $error; ?>
                 </div>
             <?php endif; ?>
             
-            <?php if(isset($_SESSION['success'])): ?>
+            <?php if (isset($_SESSION['success'])): ?>
                 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                     <?php echo $_SESSION['success']; ?>
                 </div>
@@ -97,7 +103,7 @@ $materias = $db->resultSet();
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <?php foreach($materias as $materia): ?>
+                            <?php foreach ($materias as $materia): ?>
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($materia->nombre); ?></td>
                                 <td class="px-6 py-4"><?php echo htmlspecialchars($materia->descripcion); ?></td>
@@ -108,7 +114,7 @@ $materias = $db->resultSet();
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <a href="editar_materia.php?id=<?php echo $materia->id; ?>" class="text-blue-500 hover:text-blue-700 mr-2">Editar</a>
-                                    <?php if($materia->activa): ?>
+                                    <?php if ($materia->activa): ?>
                                         <a href="desactivar_materia.php?id=<?php echo $materia->id; ?>" class="text-yellow-500 hover:text-yellow-700">Desactivar</a>
                                     <?php else: ?>
                                         <a href="activar_materia.php?id=<?php echo $materia->id; ?>" class="text-green-500 hover:text-green-700">Activar</a>

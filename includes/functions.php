@@ -1,4 +1,5 @@
 <?php
+// Función para generar un nombre de usuario único basado en el nombre completo
 if (!function_exists('generarUsername')) {
     function generarUsername($nombre_completo, $db) {
         $iniciales = '';
@@ -24,6 +25,7 @@ if (!function_exists('generarUsername')) {
     }
 }
 
+// Función para generar una contraseña aleatoria segura
 if (!function_exists('generarPassword')) {
     function generarPassword($longitud = 10) {
         $caracteres = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
@@ -36,14 +38,14 @@ if (!function_exists('generarPassword')) {
     }
 }
 
-
+// Función para verificar las credenciales de inicio de sesión
 function verificarLogin($username, $password) {
     $db = new Database();
     $db->query("SELECT * FROM usuarios WHERE username = :username AND activo = 1");
     $db->bind(':username', $username);
     $user = $db->single();
     
-    if($user && password_verify($password, $user->password)) {
+    if ($user && password_verify($password, $user->password)) {
         $_SESSION['user_id'] = $user->id;
         $_SESSION['username'] = $user->username;
         $_SESSION['rol'] = $user->rol_id;
@@ -53,9 +55,10 @@ function verificarLogin($username, $password) {
     return false;
 }
 
+// Función para redirigir al usuario según su rol
 function redirigirSegunRol() {
-    if(isset($_SESSION['rol'])) {
-        switch($_SESSION['rol']) {
+    if (isset($_SESSION['rol'])) {
+        switch ($_SESSION['rol']) {
             case 1:
                 header('Location: ' . APP_URL . '/admin/dashboard.php');
                 break;
@@ -72,13 +75,14 @@ function redirigirSegunRol() {
     }
 }
 
+// Función para proteger páginas restringidas según roles permitidos
 function protegerPagina($roles_permitidos = array()) {
-    if(!isset($_SESSION['user_id'])) {
+    if (!isset($_SESSION['user_id'])) {
         header('Location: ' . APP_URL . '/login.php');
         exit;
     }
     
-    if(!empty($roles_permitidos) && !in_array($_SESSION['rol'], $roles_permitidos)) {
+    if (!empty($roles_permitidos) && !in_array($_SESSION['rol'], $roles_permitidos)) {
         header('Location: ' . APP_URL . '/acceso-denegado.php');
         exit;
     }
