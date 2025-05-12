@@ -69,10 +69,6 @@ $grupos = $db->resultSet();
                                                 class="text-blue-500 hover:text-blue-700">
                                                 <i class="fas fa-users mr-1"></i> Ver estudiantes
                                             </a>
-                                            <a href="calificaciones/listar.php?grupo_id=<?= $grupo->id ?>"
-                                                class="text-green-500 hover:text-green-700">
-                                                <i class="fas fa-graduation-cap mr-1"></i> Calificaciones
-                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

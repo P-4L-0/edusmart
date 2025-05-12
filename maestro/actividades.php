@@ -45,12 +45,13 @@ if ($materia_id) {
 
     // Obtener actividades
     $db->query("SELECT a.id, a.nombre, a.descripcion, a.porcentaje, a.trimestre, 
-    a.fecha_creacion, a.fecha_entrega
-FROM actividades a
-WHERE a.grupo_id = :grupo_id AND a.materia_id = :materia_id
-ORDER BY a.trimestre, a.fecha_creacion");
+                   a.fecha_creacion, a.fecha_entrega
+            FROM actividades a
+            WHERE a.grupo_id = :grupo_id AND a.materia_id = :materia_id AND a.trimestre = :trimestre
+            ORDER BY a.fecha_creacion");
     $db->bind(':grupo_id', $grupo_id);
     $db->bind(':materia_id', $materia_id);
+    $db->bind(':trimestre', $trimestre);
     $actividades = $db->resultSet();
 
     // Obtener información de la materia
@@ -157,10 +158,19 @@ ORDER BY a.trimestre, a.fecha_creacion");
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-semibold"><?= htmlspecialchars($materia_actual->nombre) ?></h3>
-                        <button onclick="mostrarFormulario()"
-                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            <i class="fas fa-plus mr-1"></i> Nueva Actividad
-                        </button>
+                        <?php if ($materia_id && $trimestre): ?>
+                            <?php if ($porcentajes_trimestre[$trimestre] < 100): ?>
+                                <button onclick="mostrarFormulario()"
+                                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                    <i class="fas fa-plus mr-1"></i> Nueva Actividad
+                                </button>
+                            <?php else: ?>
+                                <button disabled class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed"
+                                    title="El trimestre ya alcanzó el 100%">
+                                    <i class="fas fa-ban mr-1"></i> No se pueden agregar más
+                                </button>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Resumen de porcentajes por trimestre -->
@@ -283,7 +293,7 @@ ORDER BY a.trimestre, a.fecha_creacion");
                                                         class="text-blue-500 hover:text-blue-700 mr-2">
                                                         <i class="fas fa-graduation-cap mr-1"></i> Calificaciones
                                                     </a>
-                                                    <a href="#" onclick="editarActividad(<?= $actividad->id ?>)"
+                                                    <a href="#" onclick="abrirModalEditar(<?= $actividad->id ?>)"
                                                         class="text-green-500 hover:text-green-700 mr-2">
                                                         <i class="fas fa-edit mr-1"></i> Editar
                                                     </a>
@@ -354,7 +364,57 @@ ORDER BY a.trimestre, a.fecha_creacion");
                     });
             }
         }
+        function abrirModalEditar(id, nombre, descripcion, porcentaje, materia_id, trimestre) {
+            document.getElementById('editar_id').value = id;
+            document.getElementById('editar_nombre').value = nombre;
+            document.getElementById('editar_descripcion').value = descripcion;
+            document.getElementById('editar_porcentaje').value = porcentaje;
+            document.getElementById('editar_materia_id').value = materia_id;
+            document.getElementById('editar_trimestre').value = trimestre;
+
+            document.getElementById('editar_error').classList.add('hidden');
+            document.getElementById('modalEditarActividad').classList.remove('hidden');
+        }
+
+        function cerrarModalEditar() {
+            document.getElementById('modalEditarActividad').classList.add('hidden');
+        }
+
     </script>
+
+    <!-- Modal de edición -->
+    <div id="modalEditarActividad"
+        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Editar Actividad</h2>
+            <form id="formEditarActividad" action="editar_actividad.php" method="POST">
+                <input type="hidden" id="editar_id">
+                <input type="hidden" id="editar_materia_id">
+                <input type="hidden" id="editar_trimestre">
+                <div class="mb-4">
+                    <label for="editar_nombre" class="block font-medium">Nombre</label>
+                    <input type="text" id="editar_nombre" name="nombre" class="w-full border rounded p-2" required>
+                </div>
+                <div class="mb-4">
+                    <label for="editar_descripcion" class="block font-medium">Descripción</label>
+                    <textarea id="editar_descripcion" name="descripcion" class="w-full border rounded p-2"
+                        required></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="editar_porcentaje" class="block font-medium">Porcentaje</label>
+                    <input type="number" id="editar_porcentaje" name="porcentaje" step="0.01" min="0" max="100"
+                        class="w-full border rounded p-2" required>
+                </div>
+                <div id="editar_error" class="text-red-500 text-sm mb-2 hidden"></div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="cerrarModalEditar()"
+                        class="mr-2 px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </body>
 
 </html>

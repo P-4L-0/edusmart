@@ -450,3 +450,458 @@ BEGIN
 END //
 
 DELIMITER ;
+
+-- Tabla de bitácora mejorada
+CREATE TABLE IF NOT EXISTS bitacora (
+    id_reg INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_sistema VARCHAR(50) NOT NULL,
+    fecha_hora_sistema DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    nombre_tabla VARCHAR(50) NOT NULL,
+    accion ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    id_registro_afectado INT,
+    valores_anteriores JSON,
+    valores_nuevos JSON,
+    ip_conexion VARCHAR(45),
+    modulo VARCHAR(50)
+);
+
+DELIMITER //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'usuarios'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_usuarios
+AFTER INSERT ON usuarios
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'usuarios', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'nombre_completo', NEW.nombre_completo,
+            'username', NEW.username,
+            'rol_id', NEW.rol_id,
+            'activo', NEW.activo,
+            'fecha_nacimiento', NEW.fecha_nacimiento
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Usuarios'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_update_usuarios
+AFTER UPDATE ON usuarios
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'usuarios', 'UPDATE', NEW.id,
+        JSON_OBJECT(
+            'nombre_completo', OLD.nombre_completo,
+            'username', OLD.username,
+            'rol_id', OLD.rol_id,
+            'activo', OLD.activo,
+            'fecha_nacimiento', OLD.fecha_nacimiento
+        ),
+        JSON_OBJECT(
+            'nombre_completo', NEW.nombre_completo,
+            'username', NEW.username,
+            'rol_id', NEW.rol_id,
+            'activo', NEW.activo,
+            'fecha_nacimiento', NEW.fecha_nacimiento
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Usuarios'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_usuarios
+AFTER DELETE ON usuarios
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'usuarios', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'nombre_completo', OLD.nombre_completo,
+            'username', OLD.username,
+            'rol_id', OLD.rol_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Usuarios'
+    );
+END //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'materias'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_materias
+AFTER INSERT ON materias
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'materias', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'nombre', NEW.nombre,
+            'descripcion', NEW.descripcion,
+            'activa', NEW.activa
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión Académica'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_update_materias
+AFTER UPDATE ON materias
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'materias', 'UPDATE', NEW.id,
+        JSON_OBJECT(
+            'nombre', OLD.nombre,
+            'descripcion', OLD.descripcion,
+            'activa', OLD.activa
+        ),
+        JSON_OBJECT(
+            'nombre', NEW.nombre,
+            'descripcion', NEW.descripcion,
+            'activa', NEW.activa
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión Académica'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_materias
+AFTER DELETE ON materias
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'materias', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'nombre', OLD.nombre,
+            'descripcion', OLD.descripcion
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión Académica'
+    );
+END //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'grupos'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_grupos
+AFTER INSERT ON grupos
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'grupos', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'nombre', NEW.nombre,
+            'grado', NEW.grado,
+            'ciclo_escolar', NEW.ciclo_escolar,
+            'maestro_id', NEW.maestro_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Grupos'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_update_grupos
+AFTER UPDATE ON grupos
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'grupos', 'UPDATE', NEW.id,
+        JSON_OBJECT(
+            'nombre', OLD.nombre,
+            'grado', OLD.grado,
+            'ciclo_escolar', OLD.ciclo_escolar,
+            'maestro_id', OLD.maestro_id
+        ),
+        JSON_OBJECT(
+            'nombre', NEW.nombre,
+            'grado', NEW.grado,
+            'ciclo_escolar', NEW.ciclo_escolar,
+            'maestro_id', NEW.maestro_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Grupos'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_grupos
+AFTER DELETE ON grupos
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'grupos', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'nombre', OLD.nombre,
+            'grado', OLD.grado
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Grupos'
+    );
+END //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'estudiantes'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_estudiantes
+AFTER INSERT ON estudiantes
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'estudiantes', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'nombre_completo', NEW.nombre_completo,
+            'fecha_nacimiento', NEW.fecha_nacimiento,
+            'grupo_id', NEW.grupo_id,
+            'activo', NEW.activo
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Estudiantes'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_update_estudiantes
+AFTER UPDATE ON estudiantes
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'estudiantes', 'UPDATE', NEW.id,
+        JSON_OBJECT(
+            'nombre_completo', OLD.nombre_completo,
+            'fecha_nacimiento', OLD.fecha_nacimiento,
+            'grupo_id', OLD.grupo_id,
+            'activo', OLD.activo
+        ),
+        JSON_OBJECT(
+            'nombre_completo', NEW.nombre_completo,
+            'fecha_nacimiento', NEW.fecha_nacimiento,
+            'grupo_id', NEW.grupo_id,
+            'activo', NEW.activo
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Estudiantes'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_estudiantes
+AFTER DELETE ON estudiantes
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'estudiantes', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'nombre_completo', OLD.nombre_completo,
+            'grupo_id', OLD.grupo_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión de Estudiantes'
+    );
+END //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'actividades'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_actividades
+AFTER INSERT ON actividades
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'actividades', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'nombre', NEW.nombre,
+            'materia_id', NEW.materia_id,
+            'grupo_id', NEW.grupo_id,
+            'trimestre', NEW.trimestre,
+            'porcentaje', NEW.porcentaje,
+            'fecha_entrega', NEW.fecha_entrega
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión Académica'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_update_actividades
+AFTER UPDATE ON actividades
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'actividades', 'UPDATE', NEW.id,
+        JSON_OBJECT(
+            'nombre', OLD.nombre,
+            'porcentaje', OLD.porcentaje,
+            'trimestre', OLD.trimestre,
+            'fecha_entrega', OLD.fecha_entrega
+        ),
+        JSON_OBJECT(
+            'nombre', NEW.nombre,
+            'porcentaje', NEW.porcentaje,
+            'trimestre', NEW.trimestre,
+            'fecha_entrega', NEW.fecha_entrega
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión Académica'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_actividades
+AFTER DELETE ON actividades
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'actividades', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'nombre', OLD.nombre,
+            'materia_id', OLD.materia_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Gestión Académica'
+    );
+END //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'notas'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_notas
+AFTER INSERT ON notas
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'notas', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'estudiante_id', NEW.estudiante_id,
+            'actividad_id', NEW.actividad_id,
+            'calificacion', NEW.calificacion
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Registro de Calificaciones'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_update_notas
+AFTER UPDATE ON notas
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'notas', 'UPDATE', NEW.id,
+        JSON_OBJECT(
+            'calificacion', OLD.calificacion
+        ),
+        JSON_OBJECT(
+            'calificacion', NEW.calificacion
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Registro de Calificaciones'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_notas
+AFTER DELETE ON notas
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'notas', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'estudiante_id', OLD.estudiante_id,
+            'actividad_id', OLD.actividad_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Registro de Calificaciones'
+    );
+END //
+
+-- =============================================
+-- TRIGGERS PARA TABLA 'maestros_materias'
+-- =============================================
+CREATE TRIGGER tr_bitacora_insert_maestros_materias
+AFTER INSERT ON maestros_materias
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_nuevos, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'maestros_materias', 'INSERT', NEW.id,
+        JSON_OBJECT(
+            'maestro_id', NEW.maestro_id,
+            'materia_id', NEW.materia_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Asignación de Materias'
+    );
+END //
+
+CREATE TRIGGER tr_bitacora_delete_maestros_materias
+AFTER DELETE ON maestros_materias
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (
+        usuario_sistema, nombre_tabla, accion, id_registro_afectado,
+        valores_anteriores, ip_conexion, modulo
+    ) VALUES (
+        CURRENT_USER(), 'maestros_materias', 'DELETE', OLD.id,
+        JSON_OBJECT(
+            'maestro_id', OLD.maestro_id,
+            'materia_id', OLD.materia_id
+        ),
+        (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '@', -1)),
+        'Asignación de Materias'
+    );
+END //
+
+DELIMITER ;

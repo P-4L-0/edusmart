@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 require_once BASE_PATH . 'functions.php';
-require_once 'D:\xampp\htdocs\smartedu\vendor\autoload.php'; // Asegúrate de tener instalado composer y TCPDF
+require_once __DIR__ . '/../vendor/autoload.php'; // Asegúrate de tener instalado composer y TCPDF
 
 use TCPDF as PDF;
 
