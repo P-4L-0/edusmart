@@ -88,6 +88,22 @@ CREATE TABLE notas (
     UNIQUE KEY (estudiante_id, actividad_id)
 );
 
+-- Tabla de bitácora
+
+CREATE TABLE IF NOT EXISTS bitacora (
+    id_reg INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_sistema VARCHAR(50) NOT NULL,
+    fecha_hora_sistema DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    nombre_tabla VARCHAR(50) NOT NULL,
+    accion ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    id_registro_afectado INT,
+    valores_anteriores JSON,
+    valores_nuevos JSON,
+    ip_conexion VARCHAR(45),
+    modulo VARCHAR(50)
+);
+
+
 DELIMITER //
 
 
