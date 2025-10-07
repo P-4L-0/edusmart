@@ -129,10 +129,10 @@ $maestros = $db->resultSet();
                                 <?php foreach ($estudiantes as $index => $estudiante): ?>
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap"><?= $index + 1 ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($estudiante->nie) ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($estudiante->id) ?></td>
                                     <td class="px-6 py-4"><?= htmlspecialchars($estudiante->nombre_completo) ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <button onclick="editarEstudiante(<?= $estudiante->id ?>, '<?= htmlspecialchars($estudiante->nombre_completo) ?>', '<?= htmlspecialchars($estudiante->nie) ?>')"
+                                        <button onclick="editarEstudiante(<?= $estudiante->id ?>, '<?= htmlspecialchars($estudiante->nombre_completo) ?>', '<?= htmlspecialchars($estudiante->id) ?>')"
                                                 class="text-blue-500 hover:text-blue-700 mr-3">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -299,7 +299,6 @@ $maestros = $db->resultSet();
             </div>
         </div>
     </div>
-
     <script>
     // Funciones para manejar los modales
     function cerrarModal(id) {

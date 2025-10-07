@@ -115,6 +115,7 @@ class DateFormatter
         }
     }
 
+    /** @param float|int $value value to be formatted */
     public static function format(mixed $value, string $format): string
     {
         // strip off first part containing e.g. [$-F800] or [$USD-409]
@@ -163,7 +164,7 @@ class DateFormatter
         // If the colon preceding minute had been quoted, as happens in
         // Excel 2003 XML formats, m will not have been changed to i above.
         // Change it now.
-        $format = (string) \preg_replace('/\\\\:m/', ':i', $format);
+        $format = (string) \preg_replace('/\\\:m/', ':i', $format);
         $microseconds = (int) $dateObj->format('u');
         if (str_contains($format, ':s.000')) {
             $milliseconds = (int) round($microseconds / 1000.0);

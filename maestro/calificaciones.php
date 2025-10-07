@@ -302,8 +302,8 @@ if ($materia_id) {
                                             <tr data-estudiante="<?= $estudiante->id ?>">
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <?= htmlspecialchars($estudiante->nombre_completo) ?>
-                                                    <?php if ($estudiante->nie): ?>
-                                                        <div class="text-sm text-gray-500">NIE: <?= $estudiante->nie ?></div>
+                                                    <?php if ($estudiante->id): ?>
+                                                        <div class="text-sm text-gray-500">NIE: <?= $estudiante->id ?></div>
                                                     <?php endif; ?>
                                                 </td>
                                                 <?php foreach ($actividades as $actividad):

@@ -20,7 +20,8 @@
                 </a>
             </li>
             <li>
-                <a href="<?php echo APP_URL; ?>/logout.php" class="block px-4 py-2 rounded-lg hover:bg-red-700">Cerrar Sesión</a>
+                <a href="<?php echo APP_URL; ?>/logout.php" class="block px-4 py-2 rounded-lg hover:bg-red-700">
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</a>
             </li>
         </ul>
     </nav>

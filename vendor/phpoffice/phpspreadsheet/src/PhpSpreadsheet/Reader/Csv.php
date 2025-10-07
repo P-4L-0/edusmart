@@ -446,7 +446,7 @@ class Csv extends BaseReader
                     // Set cell value
                     $sheet->getCell($columnLetter . $outRow)->setValue($rowDatum);
                 }
-                ++$columnLetter;
+                StringHelper::stringIncrement($columnLetter);
             }
             $rowData = self::getCsv($fileHandle, 0, $delimiter, $this->enclosure, $this->escapeCharacter);
             ++$currentRow;
@@ -602,6 +602,7 @@ class Csv extends BaseReader
             'text/csv',
             'text/plain',
             'inode/x-empty',
+            'text/html',
         ];
 
         return in_array($type, $supportedTypes, true);

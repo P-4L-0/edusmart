@@ -112,7 +112,7 @@ $materias = $db->resultSet();
                             <?php foreach ($estudiantes as $index => $estudiante): ?>
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap"><?= $index + 1 ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($estudiante->nie) ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($estudiante->id) ?></td>
                                     <td class="px-6 py-4"><?= htmlspecialchars($estudiante->nombre_completo) ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <a href="javascript:void(0);" onclick="abrirModal('modalVer<?= $estudiante->id ?>')"
@@ -158,7 +158,7 @@ $materias = $db->resultSet();
                     <div class="bg-white p-6 rounded-lg w-full max-w-md shadow-lg relative">
                         <h3 class="text-xl font-bold mb-4">Detalles del Estudiante</h3>
                         <p><strong>Nombre:</strong> <?= htmlspecialchars($estudiante->nombre_completo) ?></p>
-                        <p><strong>NIE:</strong> <?= htmlspecialchars($estudiante->nie) ?></p>
+                        <p><strong>NIE:</strong> <?= htmlspecialchars($estudiante->id) ?></p>
                         <p><strong>Fecha de nacimiento:</strong> <?= htmlspecialchars($estudiante->fecha_nacimiento) ?></p>
                         <div class="mt-4 text-right">
                             <button onclick="cerrarModal('modalVer<?= $estudiante->id ?>')"

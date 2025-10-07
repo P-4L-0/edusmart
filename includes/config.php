@@ -23,5 +23,6 @@ $db = new Database(); // Crear una instancia de la clase Database
 // Opciones para la conexión PDO
 $options = array(
     PDO::ATTR_PERSISTENT => true, // Conexión persistente para mejorar el rendimiento
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION // Modo de errores para lanzar excepciones
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Modo de errores para lanzar excepciones
+    PDO::ATTR_EMULATE_PREPARES   => false
 );

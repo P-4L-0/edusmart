@@ -50,7 +50,7 @@ class Calculation
     //    Defined Names: Named Range of cells, or Named Formulae
     const CALCULATION_REGEXP_DEFINEDNAME = '((([^\s,!&%^\/\*\+<>=-]*)|(\'(?:[^\']|\'[^!])+?\')|(\"(?:[^\"]|\"[^!])+?\"))!)?([_\p{L}][_\p{L}\p{N}\.]*)';
     // Structured Reference (Fully Qualified and Unqualified)
-    const CALCULATION_REGEXP_STRUCTURED_REFERENCE = '([\p{L}_\\\\][\p{L}\p{N}\._]+)?(\[(?:[^\d\]+-])?)';
+    const CALCULATION_REGEXP_STRUCTURED_REFERENCE = '([\p{L}_\\\][\p{L}\p{N}\._]+)?(\[(?:[^\d\]+-])?)';
     //    Error
     const CALCULATION_REGEXP_ERROR = '\#[A-Z][A-Z0_\/]*[!\?]?';
 
@@ -69,8 +69,6 @@ class Calculation
 
     /**
      * Instance of this class.
-     *
-     * @var ?Calculation
      */
     private static ?Calculation $instance = null;
 
@@ -120,17 +118,12 @@ class Calculation
      */
     private Logger $debugLog;
 
-    private bool $suppressFormulaErrorsNew = false;
+    private bool $suppressFormulaErrors = false;
 
     /**
      * Error message for any error that was raised/thrown by the calculation engine.
      */
     public ?string $formulaError = null;
-
-    /**
-     * Reference Helper.
-     */
-    private static ReferenceHelper $referenceHelper;
 
     /**
      * An array of the nested cell references accessed by the calculation engine, used for the debug log.
@@ -2880,7 +2873,6 @@ class Calculation
         $this->cyclicReferenceStack = new CyclicReferenceStack();
         $this->debugLog = new Logger($this->cyclicReferenceStack);
         $this->branchPruner = new BranchPruner($this->branchPruningEnabled);
-        self::$referenceHelper = ReferenceHelper::getInstance();
     }
 
     private static function loadLocales(): void
@@ -3272,10 +3264,8 @@ class Calculation
         return $formula;
     }
 
-    /** @var ?array */
     private static ?array $functionReplaceFromExcel;
 
-    /** @var ?array */
     private static ?array $functionReplaceToLocale;
 
     /**
@@ -3321,10 +3311,8 @@ class Calculation
         );
     }
 
-    /** @var ?array */
     private static ?array $functionReplaceFromLocale;
 
-    /** @var ?array */
     private static ?array $functionReplaceToExcel;
 
     /**
@@ -4065,7 +4053,7 @@ class Calculation
             $opCharacter = $formula[$index]; //    Get the first character of the value at the current index position
 
             // Check for two-character operators (e.g. >=, <=, <>)
-            if ((isset(self::$comparisonOperators[$opCharacter])) && (strlen($formula) > $index) && (isset(self::$comparisonOperators[$formula[$index + 1]]))) {
+            if ((isset(self::$comparisonOperators[$opCharacter])) && (strlen($formula) > $index) && isset($formula[$index + 1], self::$comparisonOperators[$formula[$index + 1]])) {
                 $opCharacter .= $formula[++$index];
             }
             //    Find out if we're currently at the beginning of a number, variable, cell/row/column reference,
@@ -4792,13 +4780,20 @@ class Calculation
 
                             for ($row = 0; $row < $rows; ++$row) {
                                 for ($column = 0; $column < $columns; ++$column) {
-                                    $operand1[$row][$column]
-                                        = Shared\StringHelper::substring(
-                                            self::boolToString($operand1[$row][$column])
-                                            . self::boolToString($operand2[$row][$column]),
-                                            0,
-                                            DataType::MAX_STRING_LENGTH
-                                        );
+                                    $op1x = self::boolToString($operand1[$row][$column]);
+                                    $op2x = self::boolToString($operand2[$row][$column]);
+                                    if (Information\ErrorValue::isError($op1x)) {
+                                        // no need to do anything
+                                    } elseif (Information\ErrorValue::isError($op2x)) {
+                                        $operand1[$row][$column] = $op2x;
+                                    } else {
+                                        $operand1[$row][$column]
+                                            = Shared\StringHelper::substring(
+                                                $op1x . $op2x,
+                                                0,
+                                                DataType::MAX_STRING_LENGTH
+                                            );
+                                    }
                                 }
                             }
                             $result = $operand1;
@@ -4808,7 +4803,13 @@ class Calculation
                             // using the concatenation operator
                             // with literals that fits in 32K,
                             // so I don't think we can overflow here.
-                            $result = self::FORMULA_STRING_QUOTE . str_replace('""', self::FORMULA_STRING_QUOTE, self::unwrapResult($operand1) . self::unwrapResult($operand2)) . self::FORMULA_STRING_QUOTE;
+                            if (Information\ErrorValue::isError($operand1)) {
+                                $result = $operand1;
+                            } elseif (Information\ErrorValue::isError($operand2)) {
+                                $result = $operand2;
+                            } else {
+                                $result = self::FORMULA_STRING_QUOTE . str_replace('""', self::FORMULA_STRING_QUOTE, self::unwrapResult($operand1) . self::unwrapResult($operand2)) . self::FORMULA_STRING_QUOTE;
+                            }
                         }
                         $this->debugLog->writeDebugLog('Evaluation Result is %s', $this->showTypeDetails($result));
                         $stack->push('Value', $result);
@@ -5074,9 +5075,10 @@ class Calculation
                     if ($cell === null || $pCellWorksheet === null) {
                         return $this->raiseFormulaError("undefined name '$token'");
                     }
+                    $specifiedWorksheet = trim($matches[2], "'");
 
                     $this->debugLog->writeDebugLog('Evaluating Defined Name %s', $definedName);
-                    $namedRange = DefinedName::resolveName($definedName, $pCellWorksheet);
+                    $namedRange = DefinedName::resolveName($definedName, $pCellWorksheet, $specifiedWorksheet);
                     // If not Defined Name, try as Table.
                     if ($namedRange === null && $this->spreadsheet !== null) {
                         $table = $this->spreadsheet->getTableByName($definedName);
@@ -5101,7 +5103,7 @@ class Calculation
                         return $this->raiseFormulaError("undefined name '$definedName'");
                     }
 
-                    $result = $this->evaluateDefinedName($cell, $namedRange, $pCellWorksheet, $stack);
+                    $result = $this->evaluateDefinedName($cell, $namedRange, $pCellWorksheet, $stack, $specifiedWorksheet !== '');
                     if (isset($storeKey)) {
                         $branchStore[$storeKey] = $result;
                     }
@@ -5350,7 +5352,7 @@ class Calculation
     {
         $this->formulaError = $errorMessage;
         $this->cyclicReferenceStack->clear();
-        $suppress = $this->suppressFormulaErrors ?? $this->suppressFormulaErrorsNew;
+        $suppress = $this->suppressFormulaErrors;
         if (!$suppress) {
             throw new Exception($errorMessage, $code, $exception);
         }
@@ -5580,10 +5582,10 @@ class Calculation
         return $args;
     }
 
-    private function evaluateDefinedName(Cell $cell, DefinedName $namedRange, Worksheet $cellWorksheet, Stack $stack): mixed
+    private function evaluateDefinedName(Cell $cell, DefinedName $namedRange, Worksheet $cellWorksheet, Stack $stack, bool $ignoreScope = false): mixed
     {
         $definedNameScope = $namedRange->getScope();
-        if ($definedNameScope !== null && $definedNameScope !== $cellWorksheet) {
+        if ($definedNameScope !== null && $definedNameScope !== $cellWorksheet && !$ignoreScope) {
             // The defined name isn't in our current scope, so #REF
             $result = ExcelError::REF();
             $stack->push('Error', $result, $namedRange->getName());
@@ -5608,11 +5610,14 @@ class Calculation
         $recursiveCalculationCellAddress = $recursiveCalculationCell->getCoordinate();
 
         // Adjust relative references in ranges and formulae so that we execute the calculation for the correct rows and columns
-        $definedNameValue = self::$referenceHelper->updateFormulaReferencesAnyWorksheet(
-            $definedNameValue,
-            Coordinate::columnIndexFromString($cell->getColumn()) - 1,
-            $cell->getRow() - 1
-        );
+        $definedNameValue = ReferenceHelper::getInstance()
+            ->updateFormulaReferencesAnyWorksheet(
+                $definedNameValue,
+                Coordinate::columnIndexFromString(
+                    $cell->getColumn()
+                ) - 1,
+                $cell->getRow() - 1
+            );
 
         $this->debugLog->writeDebugLog('Value adjusted for relative references is %s', $definedNameValue);
 
@@ -5634,12 +5639,12 @@ class Calculation
 
     public function setSuppressFormulaErrors(bool $suppressFormulaErrors): void
     {
-        $this->suppressFormulaErrorsNew = $suppressFormulaErrors;
+        $this->suppressFormulaErrors = $suppressFormulaErrors;
     }
 
     public function getSuppressFormulaErrors(): bool
     {
-        return $this->suppressFormulaErrorsNew;
+        return $this->suppressFormulaErrors;
     }
 
     private static function boolToString(mixed $operand1): mixed

@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
     
     try {
         // Incluir la librería PhpSpreadsheet para procesar archivos Excel
-        require 'D:\xampp\htdocs\smartedu\vendor\autoload.php';
+        require '../vendor/autoload.php';
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo['tmp_name']);
         $sheet = $spreadsheet->getActiveSheet();
         
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
             $nombre = trim($row[2]); // Nombre completo del estudiante
             
             // Preparar la consulta para insertar un estudiante
-            $db->query("INSERT INTO estudiantes (nie, nombre_completo, grupo_id) 
+            $db->query("INSERT INTO estudiantes (id, nombre_completo, grupo_id) 
                        VALUES (:nie, :nombre, :grupo_id)");
             $db->bind(':nie', $nie);
             $db->bind(':nombre', $nombre);

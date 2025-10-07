@@ -6,6 +6,7 @@ use DOMAttr;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
+use DOMText;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Helper\Dimension as HelperDimension;
@@ -18,6 +19,7 @@ use PhpOffice\PhpSpreadsheet\Reader\Security\XmlScanner;
 use PhpOffice\PhpSpreadsheet\RichText\RichText;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Shared\File;
+use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -318,6 +320,7 @@ class Ods extends BaseReader
             $tables = $workbookData->getElementsByTagNameNS($tableNs, 'table');
 
             $worksheetID = 0;
+            $sheetCreated = false;
             foreach ($tables as $worksheetDataSet) {
                 /** @var DOMElement $worksheetDataSet */
                 $worksheetName = $worksheetDataSet->getAttributeNS($tableNs, 'name');
@@ -335,6 +338,7 @@ class Ods extends BaseReader
 
                 // Create sheet
                 $spreadsheet->createSheet();
+                $sheetCreated = true;
                 $spreadsheet->setActiveSheetIndex($worksheetID);
 
                 if ($worksheetName || is_numeric($worksheetName)) {
@@ -388,7 +392,9 @@ class Ods extends BaseReader
                                     $spreadsheet->getActiveSheet()
                                         ->getColumnDimension($tableColumnString)
                                         ->setWidth($columnWidth->toUnit('cm'), 'cm');
-                                    ++$tableColumnString;
+                                    StringHelper::stringIncrement(
+                                        $tableColumnString
+                                    );
                                 }
                             }
                             $tableColumnIndex += $rowRepeats;
@@ -402,8 +408,11 @@ class Ods extends BaseReader
                             }
 
                             $columnID = 'A';
-                            /** @var DOMElement $cellData */
+                            /** @var DOMElement|DOMText $cellData */
                             foreach ($childNode->childNodes as $cellData) {
+                                if ($cellData instanceof DOMText) {
+                                    continue; // should just be whitespace
+                                }
                                 if ($this->getReadFilter() !== null) {
                                     if (!$this->getReadFilter()->readCell($columnID, $rowID, $worksheetName)) {
                                         if ($cellData->hasAttributeNS($tableNs, 'number-columns-repeated')) {
@@ -413,7 +422,9 @@ class Ods extends BaseReader
                                         }
 
                                         for ($i = 0; $i < $colRepeats; ++$i) {
-                                            ++$columnID;
+                                            StringHelper::stringIncrement(
+                                                $columnID
+                                            );
                                         }
 
                                         continue;
@@ -435,14 +446,25 @@ class Ods extends BaseReader
 
                                 if ($annotation->length > 0 && $annotation->item(0) !== null) {
                                     $textNode = $annotation->item(0)->getElementsByTagNameNS($textNs, 'p');
+                                    $textNodeLength = $textNode->length;
+                                    $newLineOwed = false;
+                                    for ($textNodeIndex = 0; $textNodeIndex < $textNodeLength; ++$textNodeIndex) {
+                                        $textNodeItem = $textNode->item($textNodeIndex);
+                                        if ($textNodeItem !== null) {
+                                            $text = $this->scanElementForText($textNodeItem);
+                                            if ($newLineOwed) {
+                                                $spreadsheet->getActiveSheet()
+                                                    ->getComment($columnID . $rowID)
+                                                    ->getText()
+                                                    ->createText("\n");
+                                            }
+                                            $newLineOwed = true;
 
-                                    if ($textNode->length > 0 && $textNode->item(0) !== null) {
-                                        $text = $this->scanElementForText($textNode->item(0));
-
-                                        $spreadsheet->getActiveSheet()
-                                            ->getComment($columnID . $rowID)
-                                            ->setText($this->parseRichText($text));
-//                                                                    ->setAuthor( $author )
+                                            $spreadsheet->getActiveSheet()
+                                                ->getComment($columnID . $rowID)
+                                                ->getText()
+                                                ->createText($this->parseRichText($text));
+                                        }
                                     }
                                 }
 
@@ -491,7 +513,7 @@ class Ods extends BaseReader
                                             break;
                                         case 'boolean':
                                             $type = DataType::TYPE_BOOL;
-                                            $dataValue = ($allCellDataText == 'TRUE') ? true : false;
+                                            $dataValue = ($cellData->getAttributeNS($officeNs, 'boolean-value') === 'true') ? true : false;
 
                                             break;
                                         case 'percentage':
@@ -576,7 +598,9 @@ class Ods extends BaseReader
                                 if ($type !== null) {
                                     for ($i = 0; $i < $colRepeats; ++$i) {
                                         if ($i > 0) {
-                                            ++$columnID;
+                                            StringHelper::stringIncrement(
+                                                $columnID
+                                            );
                                         }
 
                                         if ($type !== DataType::TYPE_NULL) {
@@ -625,7 +649,7 @@ class Ods extends BaseReader
                                 // Merged cells
                                 $this->processMergedCells($cellData, $tableNs, $type, $columnID, $rowID, $spreadsheet);
 
-                                ++$columnID;
+                                StringHelper::stringIncrement($columnID);
                             }
                             $rowID += $rowRepeats;
 
@@ -635,6 +659,9 @@ class Ods extends BaseReader
                 $pageSettings->setVisibilityForWorksheet($spreadsheet->getActiveSheet(), $worksheetStyleName);
                 $pageSettings->setPrintSettingsForWorksheet($spreadsheet->getActiveSheet(), $worksheetStyleName);
                 ++$worksheetID;
+            }
+            if ($this->createBlankSheetIfNoneRead && !$sheetCreated) {
+                $spreadsheet->createSheet();
             }
 
             $autoFilterReader->read($workbookData);
@@ -730,6 +757,8 @@ class Ods extends BaseReader
             /** @var DOMNode $child */
             if ($child->nodeType == XML_TEXT_NODE) {
                 $str .= $child->nodeValue;
+            } elseif ($child->nodeType == XML_ELEMENT_NODE && $child->nodeName == 'text:line-break') {
+                $str .= "\n";
             } elseif ($child->nodeType == XML_ELEMENT_NODE && $child->nodeName == 'text:s') {
                 // It's a space
 

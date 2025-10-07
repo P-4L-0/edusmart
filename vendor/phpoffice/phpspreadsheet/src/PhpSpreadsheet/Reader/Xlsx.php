@@ -5,6 +5,7 @@ namespace PhpOffice\PhpSpreadsheet\Reader;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\Hyperlink;
+use PhpOffice\PhpSpreadsheet\Comment;
 use PhpOffice\PhpSpreadsheet\DefinedName;
 use PhpOffice\PhpSpreadsheet\Reader\Security\XmlScanner;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx\AutoFilter;
@@ -56,6 +57,19 @@ class Xlsx extends BaseReader
     private Styles $styleReader;
 
     private array $sharedFormulae = [];
+
+    private bool $parseHuge = false;
+
+    /**
+     * Allow use of LIBXML_PARSEHUGE.
+     * This option can lead to memory leaks and failures,
+     * and is not recommended. But some very large spreadsheets
+     * seem to require it.
+     */
+    public function setParseHuge(bool $parseHuge): void
+    {
+        $this->parseHuge = $parseHuge;
+    }
 
     /**
      * Create a new Xlsx Reader instance.
@@ -118,8 +132,8 @@ class Xlsx extends BaseReader
         }
         $rels = @simplexml_load_string(
             $this->getSecurityScannerOrThrow()->scan($contents),
-            'SimpleXMLElement',
-            0,
+            SimpleXMLElement::class,
+            $this->parseHuge ? LIBXML_PARSEHUGE : 0,
             $ns
         );
 
@@ -133,8 +147,8 @@ class Xlsx extends BaseReader
         $contents = $this->getFromZipArchive($this->zip, $filename);
         $rels = simplexml_load_string(
             $this->getSecurityScannerOrThrow()->scan($contents),
-            'SimpleXMLElement',
-            0,
+            SimpleXMLElement::class,
+            $this->parseHuge ? LIBXML_PARSEHUGE : 0,
             ($ns === '' ? $ns : '')
         );
 
@@ -248,7 +262,9 @@ class Xlsx extends BaseReader
                                         $this->zip,
                                         $fileWorksheetPath
                                     )
-                                )
+                                ),
+                            null,
+                            $this->parseHuge ? LIBXML_PARSEHUGE : 0
                         );
                         $xml->setParserProperty(2, true);
 
@@ -701,6 +717,8 @@ class Xlsx extends BaseReader
                                     $sharedStrings[] = StringHelper::controlCharacterOOXML2PHP((string) $val->t);
                                 } elseif (isset($val->r)) {
                                     $sharedStrings[] = $this->parseRichText($val);
+                                } else {
+                                    $sharedStrings[] = '';
                                 }
                             }
                         }
@@ -710,12 +728,14 @@ class Xlsx extends BaseReader
                     $xmlWorkbookNS = $this->loadZip($relTarget, $mainNS);
 
                     // Set base date
+                    $excel->setExcelCalendar(Date::CALENDAR_WINDOWS_1900);
                     if ($xmlWorkbookNS->workbookPr) {
                         Date::setExcelCalendar(Date::CALENDAR_WINDOWS_1900);
                         $attrs1904 = self::getAttributes($xmlWorkbookNS->workbookPr);
                         if (isset($attrs1904['date1904'])) {
                             if (self::boolean((string) $attrs1904['date1904'])) {
                                 Date::setExcelCalendar(Date::CALENDAR_MAC_1904);
+                                $excel->setExcelCalendar(Date::CALENDAR_MAC_1904);
                             }
                         }
                     }
@@ -730,6 +750,7 @@ class Xlsx extends BaseReader
 
                     $charts = $chartDetails = [];
 
+                    $sheetCreated = false;
                     if ($xmlWorkbookNS->sheets) {
                         /** @var SimpleXMLElement $eleSheet */
                         foreach ($xmlWorkbookNS->sheets->sheet as $eleSheet) {
@@ -757,6 +778,7 @@ class Xlsx extends BaseReader
 
                             // Load sheet
                             $docSheet = $excel->createSheet();
+                            $sheetCreated = true;
                             //    Use false for $updateFormulaCellReferences to prevent adjustment of worksheet
                             //        references in formula cells... during the load, all formulae should be correct,
                             //        and we're simply bringing the worksheet name in line with the formula, not the
@@ -797,10 +819,10 @@ class Xlsx extends BaseReader
                                 }
 
                                 $sheetViewOptions = new SheetViewOptions($docSheet, $xmlSheetNS);
-                                $sheetViewOptions->load($this->getReadDataOnly(), $this->styleReader);
+                                $sheetViewOptions->load($this->readDataOnly, $this->styleReader);
 
                                 (new ColumnAndRowAttributes($docSheet, $xmlSheetNS))
-                                    ->load($this->getReadFilter(), $this->getReadDataOnly());
+                                    ->load($this->getReadFilter(), $this->readDataOnly, $this->ignoreRowsWithNoCells);
                             }
 
                             $holdSelectedCells = $docSheet->getSelectedCells();
@@ -838,6 +860,9 @@ class Xlsx extends BaseReader
                                         }
 
                                         // Read cell!
+                                        $useFormula = isset($c->f)
+                                            && ((string) $c->f !== '' || (isset($c->f->attributes()['t'])
+                                            && strtolower((string) $c->f->attributes()['t']) === 'shared'));
                                         switch ($cellDataType) {
                                             case 's':
                                                 if ((string) $c->v != '') {
@@ -862,10 +887,16 @@ class Xlsx extends BaseReader
                                                 } else {
                                                     // Formula
                                                     $this->castToFormula($c, $r, $cellDataType, $value, $calculatedValue, 'castToBoolean');
-                                                    if (isset($c->f['t'])) {
-                                                        $att = $c->f;
-                                                        $docSheet->getCell($r)->setFormulaAttributes($att);
-                                                    }
+                                                    self::storeFormulaAttributes($c->f, $docSheet, $r);
+                                                }
+
+                                                break;
+                                            case 'str':
+                                                if ($useFormula) {
+                                                    $this->castToFormula($c, $r, $cellDataType, $value, $calculatedValue, 'castToString');
+                                                    self::storeFormulaAttributes($c->f, $docSheet, $r);
+                                                } else {
+                                                    $value = self::castToString($c);
                                                 }
 
                                                 break;
@@ -892,10 +923,10 @@ class Xlsx extends BaseReader
                                                 } else {
                                                     // Formula
                                                     $this->castToFormula($c, $r, $cellDataType, $value, $calculatedValue, 'castToString');
-                                                    if (isset($c->f['t'])) {
-                                                        $attributes = $c->f['t'];
-                                                        $docSheet->getCell($r)->setFormulaAttributes(['t' => (string) $attributes]);
+                                                    if (is_numeric($calculatedValue)) {
+                                                        $calculatedValue += 0;
                                                     }
+                                                    self::storeFormulaAttributes($c->f, $docSheet, $r);
                                                 }
 
                                                 break;
@@ -927,16 +958,16 @@ class Xlsx extends BaseReader
 
                                             // Style information?
                                             if (!$this->readDataOnly) {
-                                                $holdSelected = $docSheet->getSelectedCells();
                                                 $cAttrS = (int) ($cAttr['s'] ?? 0);
                                                 // no style index means 0, it seems
                                                 $cAttrS = isset($styles[$cAttrS]) ? $cAttrS : 0;
                                                 $cell->setXfIndex($cAttrS);
                                                 // issue 3495
                                                 if ($cellDataType === DataType::TYPE_FORMULA && $styles[$cAttrS]->quotePrefix === true) {
+                                                    $holdSelected = $docSheet->getSelectedCells();
                                                     $cell->getStyle()->setQuotePrefix(false);
+                                                    $docSheet->setSelectedCells($holdSelected);
                                                 }
-                                                $docSheet->setSelectedCells($holdSelected);
                                             }
                                         }
                                         ++$rowIndex;
@@ -1138,6 +1169,14 @@ class Xlsx extends BaseReader
                                             $fillImageTitle = '';
 
                                             $clientData = $shape->xpath('.//x:ClientData');
+                                            $textboxDirection = '';
+                                            $textboxPath = $shape->xpath('.//v:textbox');
+                                            $textbox = (string) ($textboxPath[0]['style'] ?? '');
+                                            if (preg_match('/rtl/i', $textbox) === 1) {
+                                                $textboxDirection = Comment::TEXTBOX_DIRECTION_RTL;
+                                            } elseif (preg_match('/ltr/i', $textbox) === 1) {
+                                                $textboxDirection = Comment::TEXTBOX_DIRECTION_LTR;
+                                            }
                                             if (is_array($clientData) && !empty($clientData)) {
                                                 $clientData = $clientData[0];
 
@@ -1153,7 +1192,7 @@ class Xlsx extends BaseReader
                                                     }
                                                     $temp = $clientData->xpath('.//x:TextHAlign');
                                                     if (!empty($temp)) {
-                                                        $textHAlign = $temp[0];
+                                                        $textHAlign = strtolower($temp[0]);
                                                     }
                                                 }
                                             }
@@ -1161,6 +1200,9 @@ class Xlsx extends BaseReader
                                             $colx = (string) $column;
                                             if (is_numeric($rowx) && is_numeric($colx) && $textHAlign !== null) {
                                                 $docSheet->getComment([1 + (int) $colx, 1 + (int) $rowx], false)->setAlignment((string) $textHAlign);
+                                            }
+                                            if (is_numeric($rowx) && is_numeric($colx) && $textboxDirection !== '') {
+                                                $docSheet->getComment([1 + (int) $colx, 1 + (int) $rowx], false)->setTextboxDirection($textboxDirection);
                                             }
 
                                             $fillImageRelNode = $shape->xpath('.//v:fill/@o:relid');
@@ -1417,7 +1459,7 @@ class Xlsx extends BaseReader
                                                         );
                                                         if (isset($images[$linkImageKey])) {
                                                             $url = str_replace('xl/drawings/', '', $images[$linkImageKey]);
-                                                            $objDrawing->setPath($url, false);
+                                                            $objDrawing->setPath($url, false, allowExternal: $this->allowExternalImages);
                                                         }
                                                         if ($objDrawing->getPath() === '') {
                                                             continue;
@@ -1510,7 +1552,7 @@ class Xlsx extends BaseReader
                                                         );
                                                         if (isset($images[$linkImageKey])) {
                                                             $url = str_replace('xl/drawings/', '', $images[$linkImageKey]);
-                                                            $objDrawing->setPath($url, false);
+                                                            $objDrawing->setPath($url, false, allowExternal: $this->allowExternalImages);
                                                         }
                                                         if ($objDrawing->getPath() === '') {
                                                             continue;
@@ -1781,6 +1823,9 @@ class Xlsx extends BaseReader
                             }
                         }
                     }
+                    if ($this->createBlankSheetIfNoneRead && !$sheetCreated) {
+                        $excel->createSheet();
+                    }
 
                     (new WorkbookView($excel))->viewSettings($xmlWorkbook, $mainNS, $mapSheetId, $this->readDataOnly);
 
@@ -1952,7 +1997,9 @@ class Xlsx extends BaseReader
             // exists and not empty if the ribbon have some pictures (other than internal MSO)
             $UIRels = simplexml_load_string(
                 $this->getSecurityScannerOrThrow()
-                    ->scan($dataRels)
+                    ->scan($dataRels),
+                SimpleXMLElement::class,
+                $this->parseHuge ? LIBXML_PARSEHUGE : 0
             );
             if (false !== $UIRels) {
                 // we need to save id and target to avoid parsing customUI.xml and "guess" if it's a pseudo callback who load the image
@@ -2328,9 +2375,9 @@ class Xlsx extends BaseReader
                         $lastCol = $firstCol;
                         $lastRow = $firstRow;
                     }
-                    ++$lastCol;
+                    StringHelper::stringIncrement($lastCol);
                     for ($row = $firstRow; $row <= $lastRow; ++$row) {
-                        for ($col = $firstCol; $col !== $lastCol; ++$col) {
+                        for ($col = $firstCol; $col !== $lastCol; StringHelper::stringIncrement($col)) {
                             if ($numberStoredAsText === '1') {
                                 $sheet->getCell("$col$row")->getIgnoredErrors()->setNumberStoredAsText(true);
                             }
@@ -2347,6 +2394,21 @@ class Xlsx extends BaseReader
                     }
                 }
             }
+        }
+    }
+
+    private static function storeFormulaAttributes(SimpleXMLElement $f, Worksheet $docSheet, string $r): void
+    {
+        $formulaAttributes = [];
+        $attributes = $f->attributes();
+        if (isset($attributes['t'])) {
+            $formulaAttributes['t'] = (string) $attributes['t'];
+        }
+        if (isset($attributes['ref'])) {
+            $formulaAttributes['ref'] = (string) $attributes['ref'];
+        }
+        if (!empty($formulaAttributes)) {
+            $docSheet->getCell($r)->setFormulaAttributes($formulaAttributes);
         }
     }
 }
