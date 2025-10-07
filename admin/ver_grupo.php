@@ -267,14 +267,14 @@ $maestros = $db->resultSet();
                     <div class="space-y-4">
                         <div>
                             <label for="edit-nie" class="block text-gray-700 mb-2">NIE</label>
-                            <input type="text" id="edit-nie" name="id" class="w-full px-3 py-2 border rounded-lg"
-                                required readonly>
+                            <input type="" id="edit-nie" name="id"
+                                class="w-full px-3 py-2 border rounded-lg ouline-none border-none cursor-not-allowed focus:outline-none" required readonly>
                         </div>
 
                         <div>
                             <label for="edit-nombre" class="block text-gray-700 mb-2">Nombre Completo</label>
                             <input type="text" id="edit-nombre" name="nombre_completo"
-                                class="w-full px-3 py-2 border rounded-lg" required>
+                                class="w-full px-3 py-2 border rounded-lg" required autocomplete="off">
                         </div>
                     </div>
 

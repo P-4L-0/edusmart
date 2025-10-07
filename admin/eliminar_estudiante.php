@@ -9,9 +9,9 @@ header('Content-Type: application/json');
 // Crear una instancia de la base de datos
 $db = new Database();
 
-try {
+try {   
     // Leer y sanitizar los datos enviados desde el formulario
-    $id = intval($_POST['id']); // ID del estudiante a eliminar
+    $id = intval($_GET['id']); // ID del estudiante a eliminar
     $grupo_id = intval($_POST['grupo_id']); // ID del grupo al que pertenece el estudiante (si aplica)
     
     // Preparar la consulta para eliminar al estudiante
