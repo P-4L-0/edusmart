@@ -6,7 +6,7 @@ require_once BASE_PATH . 'functions.php';
 if (!function_exists('generarUsername') || !function_exists('generarPassword')) {
     die("Error: Funciones esenciales no disponibles");
 }
-
+$adminID = $_SESSION['user_id']; 
 protegerPagina([1]); // Solo admin
 
 // Crear una instancia de la base de datos
@@ -24,6 +24,15 @@ $credencialesMostrar = isset($_SESSION['credenciales_temporales']) ? $_SESSION['
 if ($credencialesMostrar) {
     unset($_SESSION['credenciales_temporales']); // Limpiar después de obtener
 }
+
+//para probar endpoints
+/*if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    echo '<pre>';
+    print_r($_POST);
+    echo '</pre>';
+    exit;
+}*/
+
 
 // Operaciones CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -89,94 +98,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: usuarios.php");
             exit;
         }
-    }
-} elseif (isset($_POST['editar_usuario'])) {
-    // Editar un usuario existente
-    $usuario_id = intval($_POST['id']);
-    $nombre_completo = trim($_POST['nombre_completo']);
-    $fecha_nacimiento = trim($_POST['fecha_nacimiento']);
-    $rol_id = intval($_POST['rol_id']);
-    $activo = isset($_POST['activo']) ? 1 : 0;
-    $materias_id = isset($_POST['materias_id']) ? $_POST['materias_id'] : [];
+    } elseif (isset($_POST['editar_usuario'])) {
+        // Editar un usuario existente
+        $usuario_id = intval($_POST['id']);
+        $nombre_completo = trim($_POST['nombre_completo']);
+        $fecha_nacimiento = trim($_POST['fecha_nacimiento']);
+        $rol_id = intval($_POST['rol_id']);
+        $activo = isset($_POST['activo']) ? 1 : 0;
+        $materias_id = isset($_POST['materias_id']) ? $_POST['materias_id'] : [];
 
-    try {
-        $db->beginTransaction();
+        try {
+            $db->beginTransaction();
 
-        // Actualizar datos básicos del usuario
-        $db->query("UPDATE usuarios SET 
+            // Actualizar datos básicos del usuario
+            $db->query("UPDATE usuarios SET 
                    nombre_completo = :nombre, 
                    fecha_nacimiento = :fecha, 
                    rol_id = :rol_id, 
                    activo = :activo 
                    WHERE id = :id");
-        $db->bind(':nombre', $nombre_completo);
-        $db->bind(':fecha', $fecha_nacimiento);
-        $db->bind(':rol_id', $rol_id);
-        $db->bind(':activo', $activo);
-        $db->bind(':id', $usuario_id);
-        $db->execute();
+            $db->bind(':nombre', $nombre_completo);
+            $db->bind(':fecha', $fecha_nacimiento);
+            $db->bind(':rol_id', $rol_id);
+            $db->bind(':activo', $activo);
+            $db->bind(':id', $usuario_id);
+            $db->execute();
 
-        // Si es maestro, actualizar materias
-        if ($rol_id == 3) {
-            // Eliminar asignaciones actuales
+            // Si es maestro, actualizar materias
+            if ($rol_id == 3) {
+                // Eliminar asignaciones actuales
+                $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
+                $db->bind(':maestro_id', $usuario_id);
+                $db->execute();
+
+                // Agregar nuevas asignaciones
+                foreach ($materias_id as $materia_id) {
+                    $materia_id = intval($materia_id);
+                    if ($materia_id > 0) {
+                        $db->query("INSERT INTO maestros_materias (maestro_id, materia_id) 
+                               VALUES (:maestro_id, :materia_id)");
+                        $db->bind(':maestro_id', $usuario_id);
+                        $db->bind(':materia_id', $materia_id);
+                        $db->execute();
+                    }
+                }
+            }
+
+            $db->commit();
+            $_SESSION['success'] = "Usuario actualizado correctamente";
+            header("Location: usuarios.php");
+            exit;
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            $_SESSION['error'] = "Error al actualizar usuario: " . $e->getMessage();
+            header("Location: usuarios.php");
+            exit;
+        }
+    } elseif (isset($_POST['eliminar_usuario'])) {
+        // Eliminar un usuario
+        $usuario_id = intval($_POST['eliminar_usuario']);
+
+        try {
+            $db->beginTransaction();
+
+            // Eliminar asignaciones de materias si es maestro
             $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
             $db->bind(':maestro_id', $usuario_id);
             $db->execute();
 
-            // Agregar nuevas asignaciones
-            foreach ($materias_id as $materia_id) {
-                $materia_id = intval($materia_id);
-                if ($materia_id > 0) {
-                    $db->query("INSERT INTO maestros_materias (maestro_id, materia_id) 
-                               VALUES (:maestro_id, :materia_id)");
-                    $db->bind(':maestro_id', $usuario_id);
-                    $db->bind(':materia_id', $materia_id);
-                    $db->execute();
-                }
-            }
+            // Eliminar el usuario
+            $db->query("DELETE FROM usuarios WHERE id = :id");
+            $db->bind(':id', $usuario_id);
+            $db->execute();
+
+            $db->commit();
+            $_SESSION['success'] = "Usuario eliminado correctamente";
+        } catch (Exception $e) {
+            $db->rollBack();
+            $_SESSION['error'] = "Error al eliminar usuario: " . $e->getMessage();
         }
 
-        $db->commit();
-        $_SESSION['success'] = "Usuario actualizado correctamente";
-        header("Location: usuarios.php");
-        exit;
+        if (isset($_SESSION['error'])) {
+            echo $_SESSION['error'];
+            exit;
+        }
 
-    } catch (Exception $e) {
-        $db->rollBack();
-        $_SESSION['error'] = "Error al actualizar usuario: " . $e->getMessage();
         header("Location: usuarios.php");
         exit;
     }
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['eliminar_usuario'])) {
-    // Eliminar un usuario
-    $usuario_id = intval($_POST['eliminar_usuario']);
-
-    try {
-        $db->beginTransaction();
-
-        // Eliminar asignaciones de materias si es maestro
-        $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
-        $db->bind(':maestro_id', $usuario_id);
-        $db->execute();
-
-        // Eliminar el usuario
-        $db->query("DELETE FROM usuarios WHERE id = :id");
-        $db->bind(':id', $usuario_id);
-        $db->execute();
-
-        $db->commit();
-        $_SESSION['success'] = "Usuario eliminado correctamente";
-    } catch (Exception $e) {
-        $db->rollBack();
-        $_SESSION['error'] = "Error al eliminar usuario: " . $e->getMessage();
-    }
-
-    header("Location: usuarios.php");
-    exit;
 }
-
 // Obtener lista de usuarios
-$db->query("SELECT u.*, r.nombre as rol FROM usuarios u JOIN roles r ON u.rol_id = r.id ORDER BY u.activo DESC, u.nombre_completo");
+$db->query("SELECT u.*, r.nombre as rol FROM usuarios u JOIN roles r ON u.rol_id = r.id where u.id != $adminID ORDER BY u.activo DESC, u.nombre_completo ");
 $usuarios = $db->resultSet();
 ?>
 
