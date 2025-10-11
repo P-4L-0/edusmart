@@ -226,13 +226,13 @@ $maestros = $db->resultSet();
                     <div class="space-y-4">
                         <div>
                             <label for="nie" class="block text-gray-700 mb-2">NIE</label>
-                            <input type="text" id="nie" name="nie" class="w-full px-3 py-2 border rounded-lg" required>
+                            <input type="text" id="nie" name="id" class="w-full px-3 py-2 border rounded-lg" required autocomplete="off">
                         </div>
 
                         <div>
                             <label for="nombre" class="block text-gray-700 mb-2">Nombre Completo</label>
                             <input type="text" id="nombre" name="nombre_completo"
-                                class="w-full px-3 py-2 border rounded-lg" required>
+                                class="w-full px-3 py-2 border rounded-lg" required autocomplete="off">
                         </div>
                     </div>
 

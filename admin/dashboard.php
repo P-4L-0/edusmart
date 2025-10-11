@@ -2,6 +2,10 @@
 // Incluir el archivo de configuración para acceder a las configuraciones globales y proteger la página
 require_once __DIR__ . '/../includes/config.php';
 protegerPagina([1]); // Solo administradores
+
+//admin del administrador
+$adminID = $_SESSION['user_id']; 
+
 ?>
 
 <!DOCTYPE html>
@@ -78,7 +82,7 @@ protegerPagina([1]); // Solo administradores
             <div class="bg-white p-6 rounded-lg shadow">
                 <h3 class="text-xl font-semibold mb-4">Últimos usuarios registrados</h3>
                 <?php
-                $db->query("SELECT u.*, r.nombre as rol FROM usuarios u JOIN roles r ON u.rol_id = r.id ORDER BY u.fecha_creacion DESC LIMIT 5");
+                $db->query("SELECT u.*, r.nombre as rol FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.id != $adminID ORDER BY u.fecha_creacion DESC LIMIT 5");
                 $usuarios = $db->resultSet();
                 ?>
 
