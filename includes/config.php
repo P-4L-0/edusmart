@@ -8,7 +8,7 @@ define('BASE_PATH', __DIR__ . '/'); // Ruta base del proyecto
 
 // Configuración de la aplicación
 define('APP_NAME', 'SmartEdu'); // Nombre de la aplicación
-define('APP_URL', 'http://localhost/smarteduv2'); // URL base de la aplicación
+define('APP_URL', 'http://localhost/edusmart'); // URL base de la aplicación
 
 // Iniciar sesión
 session_start(); // Inicia la sesión para manejar variables de sesión
