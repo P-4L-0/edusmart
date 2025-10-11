@@ -156,37 +156,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     } elseif (isset($_POST['eliminar_usuario'])) {
-        // Eliminar un usuario
-        $usuario_id = intval($_POST['eliminar_usuario']);
+    $usuario_id = intval($_POST['eliminar_usuario']);
 
-        try {
-            $db->beginTransaction();
+    try {
+        $db->beginTransaction();
 
-            // Eliminar asignaciones de materias si es maestro
-            $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
-            $db->bind(':maestro_id', $usuario_id);
-            $db->execute();
+        // Obtener rol del usuario
+        $db->query("SELECT rol_id FROM usuarios WHERE id = :id");
+        $db->bind(':id', $usuario_id);
+        $rol = $db->single(); // devuelve un objeto
 
-            // Eliminar el usuario
-            $db->query("DELETE FROM usuarios WHERE id = :id");
-            $db->bind(':id', $usuario_id);
-            $db->execute();
+        if ($rol) {
+            $rol_id = $rol->rol_id;
 
-            $db->commit();
-            $_SESSION['success'] = "Usuario eliminado correctamente";
-        } catch (Exception $e) {
-            $db->rollBack();
-            $_SESSION['error'] = "Error al eliminar usuario: " . $e->getMessage();
+            // Si es maestro (rol_id = 3)
+            if ($rol_id == 3) {
+                // Eliminar asignaciones en materias
+                $db->query("DELETE FROM maestros_materias WHERE maestro_id = :maestro_id");
+                $db->bind(':maestro_id', $usuario_id);
+                $db->execute();
+
+                //  Desasignar de grupos donde era maestro
+                $db->query("UPDATE grupos SET maestro_id = NULL WHERE maestro_id = :maestro_id");
+                $db->bind(':maestro_id', $usuario_id);
+                $db->execute();
+            }
         }
+        $db->query("DELETE FROM usuarios WHERE id = :id");
+        $db->bind(':id', $usuario_id);
+        $db->execute();
 
-        if (isset($_SESSION['error'])) {
-            echo $_SESSION['error'];
-            exit;
-        }
+        $db->commit();
+        $_SESSION['success'] = "Usuario eliminado correctamente.";
+    } catch (Exception $e) {
+        $db->rollBack();
+        $_SESSION['error'] = "Error al eliminar usuario: " . $e->getMessage();
+    }
 
-        header("Location: usuarios.php");
+    if (isset($_SESSION['error'])) {
+        echo $_SESSION['error'];
         exit;
     }
+
+    header("Location: usuarios.php");
+    exit;
+}
+
 }
 // Obtener lista de usuarios
 $db->query("SELECT u.*, r.nombre as rol FROM usuarios u JOIN roles r ON u.rol_id = r.id where u.id != $adminID ORDER BY u.activo DESC, u.nombre_completo ");
