@@ -1,5 +1,7 @@
 {   
-    
+    "comment":{
+        "description": "Json para guardar usuarios y constraseñas del sistema"
+    },    
     "admin":{
         "admin": "p4l0123"
     },
