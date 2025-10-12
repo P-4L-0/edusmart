@@ -78,26 +78,18 @@ foreach ($estudiantes as $estudiante) {
     if ($trimestre == 0) {
         // Promedio final (promedio de los 3 trimestres)
         $db->query("
-        SELECT AVG(trimestre_promedio) as promedio
-        FROM (
-            SELECT SUM(n.calificacion * a.porcentaje / 100) AS trimestre_promedio
-            FROM actividades a
-            JOIN notas n ON n.actividad_id = a.id
-            WHERE n.estudiante_id = :estudiante_id
-            AND a.materia_id = :materia_id
-            GROUP BY a.trimestre
-        ) t
-    ");
+        SELECT AVG(trimestre_promedio) AS promedio
+        FROM ( SELECT SUM(n.calificacion * a.porcentaje / 100) / SUM(a.porcentaje / 100) AS trimestre_promedio FROM actividades a
+        JOIN notas n ON n.actividad_id = a.id
+        WHERE n.estudiante_id = :estudiante_id
+        AND a.materia_id = :materia_id
+        GROUP BY a.trimestre ) t");
+
         $db->bind(':estudiante_id', $estudiante->id);
         $db->bind(':materia_id', $materia_id);
     } else {
         // Calificación por trimestre
-        $db->query("SELECT SUM(n.calificacion * a.porcentaje / 100) as promedio
-               FROM notas n 
-               JOIN actividades a ON a.id = n.actividad_id 
-               WHERE n.estudiante_id = :estudiante_id 
-                 AND a.materia_id = :materia_id 
-                 AND a.trimestre = :trimestre");
+        $db->query("SELECT SUM(n.calificacion * a.porcentaje / 100) / SUM(a.porcentaje / 100) AS promedio FROM notas n JOIN actividades a ON a.id = n.actividad_id WHERE n.estudiante_id = :estudiante_id AND a.materia_id = :materia_id AND a.trimestre = :trimestre");
         $db->bind(':estudiante_id', $estudiante->id);
         $db->bind(':materia_id', $materia_id);
         $db->bind(':trimestre', $trimestre);
