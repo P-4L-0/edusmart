@@ -1,5 +1,8 @@
 <?php
 // Este archivo genera el menú lateral (sidebar) para la interfaz de administración.
+
+// Obtener el nombre del archivo actual sin la extensión
+$current_page = basename($_SERVER['PHP_SELF'], '.php');
 ?>
 <script src="https://kit.fontawesome.com/7bcd40cb83.js" crossorigin="anonymous"></script>
 <div class="bg-blue-800 text-white w-64 min-h-screen p-4">
@@ -14,7 +17,7 @@
         <ul class="space-y-2">
             <!-- Enlace al Dashboard -->
             <li>
-                <a href="dashboard.php" class="block px-4 py-2 rounded-lg hover:bg-blue-700">
+                <a href="dashboard.php" class="block px-4 py-2 rounded-lg <?php echo ($current_page == 'dashboard') ? 'bg-blue-700' : 'hover:bg-blue-700'; ?>">
                     <i class="fa-solid fa-bars"></i>
                     Dashboard
                 </a>
@@ -22,7 +25,7 @@
 
             <!-- Enlace a la gestión de usuarios -->
             <li>
-                <a href="usuarios.php" class="block px-4 py-2 rounded-lg bg-blue-700">
+                <a href="usuarios.php" class="block px-4 py-2 rounded-lg <?php echo ($current_page == 'usuarios') ? 'bg-blue-700' : 'hover:bg-blue-700'; ?>">
                     <i class="fa-solid fa-users"></i> 
                     Usuarios
                 </a>
@@ -30,7 +33,7 @@
 
             <!-- Enlace a la gestión de materias -->
             <li>
-                <a href="materias.php" class="block px-4 py-2 rounded-lg hover:bg-blue-700">
+                <a href="materias.php" class="block px-4 py-2 rounded-lg <?php echo ($current_page == 'materias') ? 'bg-blue-700' : 'hover:bg-blue-700'; ?>">
                     <i class="fa-solid fa-book-open"></i> 
                     Materias
                 </a>
@@ -38,7 +41,7 @@
 
             <!-- Enlace a la gestión de grupos -->
             <li>
-                <a href="grupos.php" class="block px-4 py-2 rounded-lg hover:bg-blue-700">
+                <a href="grupos.php" class="block px-4 py-2 rounded-lg <?php echo ($current_page == 'grupos') ? 'bg-blue-700' : 'hover:bg-blue-700'; ?>">
                     <i class="fa-solid fa-users-rays"></i> 
                     Grupos
                 </a>
