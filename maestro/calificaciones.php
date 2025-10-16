@@ -262,7 +262,8 @@ if ($materia_id) {
             <?php if ($materia_id): ?>
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold mb-2"><?= htmlspecialchars($materia_actual->nombre) ?> - Trimestre
-                        <?= $trimestre ?></h3>
+                        <?= $trimestre ?>
+                    </h3>
 
                     <?php if (empty($actividades)): ?>
                         <div class="bg-white p-6 rounded-lg shadow text-center">
@@ -317,7 +318,9 @@ if ($materia_id) {
                                                             data-estudiante="<?= $estudiante->id ?>"
                                                             data-actividad="<?= $actividad->id ?>"
                                                             data-porcentaje="<?= $actividad->porcentaje ?>"
-                                                            onchange="guardarCalificacion(this)" placeholder="0.00">
+                                                            onchange="if (validarCalificacion(this)) guardarCalificacion(this)"
+                                                            placeholder="0.00">
+
                                                     </td>
                                                 <?php endforeach; ?>
                                                 <td class="px-6 py-4 whitespace-nowrap text-center font-semibold promedio">
@@ -384,6 +387,33 @@ if ($materia_id) {
     </div>
 
     <script>
+        function validarCalificacion(input) {
+            let valor = parseFloat(input.value);
+
+            // Si el campo está vacío, no mostrar alerta (por si el maestro aún no ha ingresado nada)
+            if (input.value.trim() === "") return true;
+
+            // Validar que sea número entre 0 y 10
+            if (isNaN(valor) || valor < 0 || valor > 10) {
+                Swal.fire({
+                    title: 'Valor inválido',
+                    text: 'La calificación debe ser un número entre 0 y 10.',
+                    icon: 'error',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#3085d6',
+                }).then(() => {
+                    input.value = ''; // limpiar campo
+                    input.focus();    // volver a enfocar
+                });
+                return false;
+            }
+
+            // Redondear a dos decimales
+            input.value = valor.toFixed(2);
+            return true;
+        }
+
+
         function exportarPDF() {
             Swal.fire({
                 title: 'Exportar a PDF',

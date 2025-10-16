@@ -1,53 +1,74 @@
 <?php
-require_once 'conexion.php';
+require_once __DIR__ . '/../includes/config.php';
+require_once BASE_PATH . 'functions.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = $_POST['id'];
-    $nombre = trim($_POST['nombre']);
-    $descripcion = trim($_POST['descripcion']);
-    $porcentaje = floatval($_POST['porcentaje']);
-    $materia_id = $_POST['materia_id'];
-    $trimestre = $_POST['trimestre'];
+protegerPagina([3]); // Solo maestros
+header('Content-Type: application/json');
 
-    // Verificar si ya existe la actividad
-    $stmt = $conn->prepare("SELECT porcentaje FROM actividades WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $stmt->bind_result($porcentaje_original);
-    if (!$stmt->fetch()) {
-        $stmt->close();
-        header("Location: materias.php?error=Actividad no encontrada");
-        exit();
-    }
-    $stmt->close();
+$db = new Database();
 
-    // Obtener la suma de los porcentajes del trimestre excluyendo esta actividad
-    $stmt = $conn->prepare("SELECT SUM(porcentaje) FROM actividades WHERE materia_id = ? AND trimestre = ? AND id != ?");
-    $stmt->bind_param("iii", $materia_id, $trimestre, $id);
-    $stmt->execute();
-    $stmt->bind_result($suma);
-    $stmt->fetch();
-    $stmt->close();
+// Leer JSON del POST
+$data = json_decode(file_get_contents('php://input'), true);
 
-    $suma = $suma ?? 0;
-    $total = $suma + $porcentaje;
+$id = $data['id'] ?? null;
+$nombre = $data['nombre'] ?? null;
+$descripcion = $data['descripcion'] ?? null;
+$porcentaje = $data['porcentaje'] ?? null;
+$materia_id = $data['materia_id'] ?? null;
+$trimestre = $data['trimestre'] ?? null;
 
-    if ($total > 100) {
-        header("Location: materias.php?error=El porcentaje total excede el 100%");
-        exit();
-    }
-
-    // Actualizar la actividad
-    $stmt = $conn->prepare("UPDATE actividades SET nombre = ?, descripcion = ?, porcentaje = ? WHERE id = ?");
-    $stmt->bind_param("ssdi", $nombre, $descripcion, $porcentaje, $id);
-    if ($stmt->execute()) {
-        $stmt->close();
-        header("Location: materias.php?success=Actividad actualizada correctamente");
-        exit();
-    } else {
-        $stmt->close();
-        header("Location: materias.php?error=Error al actualizar la actividad");
-        exit();
-    }
+if (!$id || !$nombre || !$descripcion || !$porcentaje || !$materia_id || !$trimestre) {
+    echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
+    exit;
 }
-?>
+
+try {
+    // Verificar permiso
+    $db->query("SELECT a.id 
+                FROM actividades a
+                JOIN grupos g ON a.grupo_id = g.id
+                JOIN maestros_materias mm ON a.materia_id = mm.materia_id
+                WHERE a.id = :actividad_id 
+                AND g.maestro_id = :maestro_id
+                AND mm.maestro_id = :maestro_id");
+    $db->bind(':actividad_id', $id);
+    $db->bind(':maestro_id', $_SESSION['user_id']);
+    $actividad = $db->single();
+
+    if (!$actividad) {
+        echo json_encode(['success' => false, 'message' => 'No tienes permiso para editar esta actividad']);
+        exit;
+    }
+
+    // Verificar porcentaje total
+    $db->query("SELECT SUM(porcentaje) as suma 
+                FROM actividades 
+                WHERE materia_id = :materia_id 
+                AND trimestre = :trimestre 
+                AND id != :actividad_id");
+    $db->bind(':materia_id', $materia_id);
+    $db->bind(':trimestre', $trimestre);
+    $db->bind(':actividad_id', $id);
+    $sumaObj = $db->single();
+    $suma = $sumaObj->suma ?? 0;
+
+    if (($suma + floatval($porcentaje)) > 100) {
+        echo json_encode(['success' => false, 'message' => 'El porcentaje total excede el 100%']);
+        exit;
+    }
+
+    // Actualizar actividad
+    $db->query("UPDATE actividades 
+                SET nombre = :nombre, descripcion = :descripcion, porcentaje = :porcentaje 
+                WHERE id = :actividad_id");
+    $db->bind(':nombre', $nombre);
+    $db->bind(':descripcion', $descripcion);
+    $db->bind(':porcentaje', $porcentaje);
+    $db->bind(':actividad_id', $id);
+    $db->execute();
+
+    echo json_encode(['success' => true, 'message' => 'Actividad actualizada correctamente']);
+
+} catch (PDOException $e) {
+    echo json_encode(['success' => false, 'message' => 'Error en la base de datos: ' . $e->getMessage()]);
+}

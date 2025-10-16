@@ -293,8 +293,14 @@ if ($materia_id) {
                                                         class="text-blue-500 hover:text-blue-700 mr-2">
                                                         <i class="fas fa-graduation-cap mr-1"></i> Calificaciones
                                                     </a>
-                                                    <a href="#" onclick="abrirModalEditar(<?= $actividad->id ?>)"
-                                                        class="text-green-500 hover:text-green-700 mr-2">
+                                                    <a href="#" onclick="abrirModalEditar(
+                                                        <?= $actividad->id ?>,
+                                                      '<?= addslashes(htmlspecialchars($actividad->nombre)) ?>',
+                                                      '<?= addslashes(htmlspecialchars($actividad->descripcion)) ?>',
+                                                       <?= $actividad->porcentaje ?>,
+                                                       <?= $materia_id ?>,
+                                                       <?= $actividad->trimestre ?>
+                                                        )" class="text-green-500 hover:text-green-700 mr-2">
                                                         <i class="fas fa-edit mr-1"></i> Editar
                                                     </a>
                                                     <a href="#" onclick="eliminarActividad(<?= $actividad->id ?>)"
@@ -316,104 +322,204 @@ if ($materia_id) {
                 </div>
             <?php endif; ?>
         </div>
-    </div>
+        <!-- Modal de edición -->
+        <div id="modalEditarActividad"
+            class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Editar Actividad</h2>
+                <form id="formEditarActividad" action="editar_actividad.php" method="POST">
+                    <input type="hidden" id="editar_id" name="id">
+                    <input type="hidden" id="editar_materia_id" name="materia_id">
+                    <input type="hidden" id="editar_trimestre" name="trimestre">
 
-    <script>
-        // Establecer fecha mínima como hoy en el formulario
-        document.addEventListener('DOMContentLoaded', function () {
-            const today = new Date().toISOString().split('T')[0];
-            document.querySelector('input[name="fecha_entrega"]').min = today;
+                    <div class="mb-4">
+                        <label for="editar_nombre" class="block font-medium">Nombre</label>
+                        <input type="text" id="editar_nombre" name="nombre" class="w-full border rounded p-2" required>
+                    </div>
 
-            // Si estás editando una actividad, puedes cargar su fecha aquí
-            // document.querySelector('input[name="fecha_entrega"]').value = '<?= $actividad_editar->fecha_entrega ?? '' ?>';
-        });
-    </script>
+                    <div class="mb-4">
+                        <label for="editar_descripcion" class="block font-medium">Descripción</label>
+                        <textarea id="editar_descripcion" name="descripcion" class="w-full border rounded p-2"
+                            required></textarea>
+                    </div>
 
-    <script>
-        function mostrarFormulario() {
-            document.getElementById('formulario-actividad').classList.remove('hidden');
-        }
+                    <div class="mb-4">
+                        <label for="editar_porcentaje" class="block font-medium">Porcentaje</label>
+                        <input type="number" id="editar_porcentaje" name="porcentaje" step="0.01" min="0" max="100"
+                            class="w-full border rounded p-2" required>
+                    </div>
 
-        function ocultarFormulario() {
-            document.getElementById('formulario-actividad').classList.add('hidden');
-        }
+                    <div id="editar_error" class="text-red-500 text-sm mb-2 hidden"></div>
 
-        function editarActividad(id) {
-            // Implementar lógica para editar actividad
-            alert('Editar actividad ' + id);
-        }
-
-        function eliminarActividad(id) {
-            if (confirm('¿Está seguro de eliminar esta actividad? Esto también eliminará todas las calificaciones asociadas.')) {
-                fetch('eliminar_actividad.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        actividad_id: id
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.reload();
-                        } else {
-                            alert('Error al eliminar actividad: ' + data.message);
-                        }
-                    });
-            }
-        }
-        function abrirModalEditar(id, nombre, descripcion, porcentaje, materia_id, trimestre) {
-            document.getElementById('editar_id').value = id;
-            document.getElementById('editar_nombre').value = nombre;
-            document.getElementById('editar_descripcion').value = descripcion;
-            document.getElementById('editar_porcentaje').value = porcentaje;
-            document.getElementById('editar_materia_id').value = materia_id;
-            document.getElementById('editar_trimestre').value = trimestre;
-
-            document.getElementById('editar_error').classList.add('hidden');
-            document.getElementById('modalEditarActividad').classList.remove('hidden');
-        }
-
-        function cerrarModalEditar() {
-            document.getElementById('modalEditarActividad').classList.add('hidden');
-        }
-
-    </script>
-
-    <!-- Modal de edición -->
-    <div id="modalEditarActividad"
-        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-            <h2 class="text-xl font-semibold mb-4">Editar Actividad</h2>
-            <form id="formEditarActividad" action="editar_actividad.php" method="POST">
-                <input type="hidden" id="editar_id">
-                <input type="hidden" id="editar_materia_id">
-                <input type="hidden" id="editar_trimestre">
-                <div class="mb-4">
-                    <label for="editar_nombre" class="block font-medium">Nombre</label>
-                    <input type="text" id="editar_nombre" name="nombre" class="w-full border rounded p-2" required>
-                </div>
-                <div class="mb-4">
-                    <label for="editar_descripcion" class="block font-medium">Descripción</label>
-                    <textarea id="editar_descripcion" name="descripcion" class="w-full border rounded p-2"
-                        required></textarea>
-                </div>
-                <div class="mb-4">
-                    <label for="editar_porcentaje" class="block font-medium">Porcentaje</label>
-                    <input type="number" id="editar_porcentaje" name="porcentaje" step="0.01" min="0" max="100"
-                        class="w-full border rounded p-2" required>
-                </div>
-                <div id="editar_error" class="text-red-500 text-sm mb-2 hidden"></div>
-                <div class="flex justify-end">
-                    <button type="button" onclick="cerrarModalEditar()"
-                        class="mr-2 px-4 py-2 bg-gray-300 rounded">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar cambios</button>
-                </div>
-            </form>
+                    <div class="flex justify-end">
+                        <button type="button" onclick="cerrarModalEditar()"
+                            class="mr-2 px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+
+        <script>
+            // Establecer fecha mínima como hoy en el formulario
+            document.addEventListener('DOMContentLoaded', function () {
+                const today = new Date().toISOString().split('T')[0];
+                document.querySelector('input[name="fecha_entrega"]').min = today;
+
+                // Si estás editando una actividad, puedes cargar su fecha aquí
+                // document.querySelector('input[name="fecha_entrega"]').value = '<?= $actividad_editar->fecha_entrega ?? '' ?>';
+            });
+        </script>
+
+        <script>
+            function mostrarFormulario() {
+                document.getElementById('formulario-actividad').classList.remove('hidden');
+            }
+
+            function ocultarFormulario() {
+                document.getElementById('formulario-actividad').classList.add('hidden');
+            }
+
+            function editarActividad(id) {
+                // Implementar lógica para editar actividad
+                alert('Editar actividad ' + id);
+            }
+            function eliminarActividad(id) {
+                mostrarConfirmacion(
+                    '¿Está seguro de eliminar esta actividad? Esto también eliminará todas las calificaciones asociadas.',
+                    confirmado => {
+                        if (!confirmado) {
+                            mostrarAlerta('Eliminación cancelada', false, false); // no recarga al cancelar
+                            return;
+                        }
+
+                        fetch('eliminar_actividad.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ actividad_id: id })
+                        })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    mostrarAlerta('Eliminación completada', true, true); // mensaje fijo si se eliminó
+                                } else {
+                                    mostrarAlerta(data.message || 'No se pudo eliminar la actividad', false, false);
+                                }
+                            })
+                            .catch(err => {
+                                mostrarAlerta('Error al procesar la solicitud: ' + err, false, false);
+                            });
+                    }
+                );
+            }
+
+            function mostrarAlerta(mensaje, exito = true, recargar = true) {
+                const a = document.createElement('div');
+                Object.assign(a.style, {
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    padding: '15px 20px',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    borderRadius: '6px',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                    zIndex: 9999,
+                    maxWidth: '300px',
+                    opacity: 0,
+                    transition: 'opacity 0.3s, transform 0.3s',
+                    transform: 'translateY(-20px)',
+                    backgroundColor: exito ? '#4CAF50' : '#F44336'
+                });
+                a.textContent = mensaje;
+                document.body.appendChild(a);
+                setTimeout(() => { a.style.opacity = '1'; a.style.transform = 'translateY(0)'; }, 10);
+                setTimeout(() => {
+                    a.style.opacity = '0';
+                    a.style.transform = 'translateY(-20px)';
+                    setTimeout(() => {
+                        a.remove();
+                        if (recargar && exito) window.location.reload();
+                    }, 300);
+                }, 1500);
+            }
+
+        </script>
+        <script>
+            function abrirModalEditar(id, nombre, descripcion, porcentaje, materia_id, trimestre) {
+                const set = (el, val) => document.getElementById(el).value = val;
+                set('editar_id', id); set('editar_nombre', nombre); set('editar_descripcion', descripcion);
+                set('editar_porcentaje', porcentaje); set('editar_materia_id', materia_id); set('editar_trimestre', trimestre);
+                document.getElementById('editar_error').classList.add('hidden');
+                document.getElementById('modalEditarActividad').classList.remove('hidden');
+            }
+
+            function cerrarModalEditar() {
+                document.getElementById('modalEditarActividad').classList.add('hidden');
+            }
+
+            // Confirmacion para enviar formulario
+            const form = document.getElementById('formEditarActividad');
+            form.addEventListener('submit', e => {
+                e.preventDefault();
+
+                mostrarConfirmacion('¿Desea guardar los cambios?', confirmado => {
+                    if (!confirmado) return recargar('Actualización cancelada');
+
+                    const datos = ['id', 'nombre', 'descripcion', 'porcentaje', 'materia_id', 'trimestre']
+                        .reduce((obj, c) => ({ ...obj, [c]: document.getElementById(`editar_${c}`).value }), {});
+
+                    fetch('editar_actividad.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(datos)
+                    })
+                        .then(r => r.json())
+                        .then(d => recargar(d.message, d.success))
+                        .catch(() => recargar('Error al procesar la solicitud', false));
+                });
+            });
+
+            // Alertas de  confir
+            function recargar(mensaje, exito = false) {
+                const a = document.createElement('div');
+                Object.assign(a.style, {
+                    position: 'fixed', top: '20px', right: '20px', padding: '15px 20px', color: 'white', fontWeight: 'bold',
+                    borderRadius: '6px', boxShadow: '0 4px 8px rgba(0,0,0,0.2)', zIndex: 9999, maxWidth: '300px',
+                    opacity: 0, transition: 'opacity 0.3s, transform 0.3s', transform: 'translateY(-20px)',
+                    backgroundColor: exito ? '#4CAF50' : '#F44336'
+                });
+                a.textContent = mensaje;
+                document.body.appendChild(a);
+                setTimeout(() => a.style.opacity = '1', 10);
+                setTimeout(() => {
+                    a.style.opacity = '0';
+                    setTimeout(() => {
+                        a.remove();
+                        window.location.reload();
+                    }, 300);
+                }, 1500);
+            }
+
+            // Confirmación simple
+            function mostrarConfirmacion(msg, callback) {
+                const overlay = document.createElement('div');
+                overlay.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9998;';
+                const modal = document.createElement('div');
+                modal.style = 'background:white;padding:20px;border-radius:8px;text-align:center;max-width:400px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+                modal.innerHTML = `<p style="margin-bottom:20px;">${msg}</p>
+                           <button id="confirmar" style="margin-right:10px;padding:10px 20px;border:none;border-radius:5px;background:#4CAF50;color:white;cursor:pointer;">Confirmar</button>
+                           <button id="cancelar" style="padding:10px 20px;border:none;border-radius:5px;background:#F44336;color:white;cursor:pointer;">Cancelar</button>`;
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+
+                overlay.querySelector('#confirmar').onclick = () => { callback(true); overlay.remove(); };
+                overlay.querySelector('#cancelar').onclick = () => { callback(false); overlay.remove(); };
+            }
+
+        </script>
+
+
 
 </body>
 
