@@ -180,6 +180,32 @@ if ($materia_id) {
                 fila.querySelector('.promedio').textContent = 'N/A';
             }
         }
+
+          function validarCalificacion(input) {
+            let valor = parseFloat(input.value);
+
+            // Si el campo está vacío, no mostrar alerta (por si el maestro aún no ha ingresado nada)
+            if (input.value.trim() === "") return true;
+
+            // Validar que sea número entre 0 y 10
+            if (isNaN(valor) || valor < 0 || valor > 10) {
+                Swal.fire({
+                    title: 'Valor inválido',
+                    text: 'La calificación debe ser un número entre 0 y 10.',
+                    icon: 'error',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#3085d6',
+                }).then(() => {
+                    input.value = ''; // limpiar campo
+                    input.focus();    // volver a enfocar
+                });
+                return false;
+            }
+
+            // Redondear a dos decimales
+            input.value = valor.toFixed(2);
+            return true;
+        }
     </script>
 </head>
 
@@ -354,13 +380,13 @@ if ($materia_id) {
                             <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
                                 <h4 class="font-medium mb-2">Mejor promedio</h4>
                                 <p class="text-2xl font-bold">
-                                    <?= count($promedios) > 0 ? max(array_filter($promedios)) : 'N/A' ?>
+                                    <?= !empty(array_filter($promedios)) ? max(array_filter($promedios)) : '0' ?>
                                 </p>
                             </div>
                             <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
                                 <h4 class="font-medium mb-2">Peor promedio</h4>
                                 <p class="text-2xl font-bold">
-                                    <?= count($promedios) > 0 ? min(array_filter($promedios)) : 'N/A' ?>
+                                    <?= !empty(array_filter($promedios)) ? min(array_filter($promedios)) : '0' ?>
                                 </p>
                             </div>
                         </div>
@@ -371,10 +397,6 @@ if ($materia_id) {
                                 class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 inline-block">
                                 <i class="fas fa-tasks mr-1"></i> Gestionar Actividades
                             </a>
-                            <button onclick="exportarPDF()"
-                                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                                <i class="fas fa-file-pdf mr-1"></i> Exportar a PDF
-                            </button>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -385,56 +407,6 @@ if ($materia_id) {
             <?php endif; ?>
         </div>
     </div>
-
-    <script>
-        function validarCalificacion(input) {
-            let valor = parseFloat(input.value);
-
-            // Si el campo está vacío, no mostrar alerta (por si el maestro aún no ha ingresado nada)
-            if (input.value.trim() === "") return true;
-
-            // Validar que sea número entre 0 y 10
-            if (isNaN(valor) || valor < 0 || valor > 10) {
-                Swal.fire({
-                    title: 'Valor inválido',
-                    text: 'La calificación debe ser un número entre 0 y 10.',
-                    icon: 'error',
-                    confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#3085d6',
-                }).then(() => {
-                    input.value = ''; // limpiar campo
-                    input.focus();    // volver a enfocar
-                });
-                return false;
-            }
-
-            // Redondear a dos decimales
-            input.value = valor.toFixed(2);
-            return true;
-        }
-
-
-        function exportarPDF() {
-            Swal.fire({
-                title: 'Exportar a PDF',
-                text: '¿Desea exportar las calificaciones actuales a PDF?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Exportar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Aquí puedes implementar la exportación a PDF
-                    // Por ahora solo mostramos un mensaje
-                    Swal.fire(
-                        'Exportado',
-                        'El PDF se generará en breve...',
-                        'success'
-                    );
-                }
-            });
-        }
-    </script>
 </body>
 
 </html>
