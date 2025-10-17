@@ -48,16 +48,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
         $db->beginTransaction();
         $insertados = 0; // Contador de estudiantes insertados
 
+        //contadores de inserciones
+        $insertados = 0;
+        $duplicados = 0;
+
         // Recorrer las filas de datos a partir de la fila de inicio
         for ($i = $startRow; $i < count($data); $i++) {
             $row = $data[$i];
 
             // Verificar que las columnas necesarias no estén vacías
-            if (empty($row[1]) || empty($row[2])) {
+            if (empty($row[1]) || empty($row[2]) || empty($row[3])) {
                 continue;
             }
             $nie = trim($row[1]);
             $nombre = trim($row[2]);
+            $birth = trim($row[3]);
+
+            //cambiamso el formato de fecha dia-mes-año a año-mes-dia
+            $dateObj = DateTime::createFromFormat('d/m/Y', $birth);
+            $birth = $dateObj->format('Y-m-d');
 
             // Verificar si el estudiante ya existe
             $db->query("SELECT COUNT(*) as total FROM estudiantes WHERE id = :nie");
@@ -66,11 +75,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
             $existe = $db->single()->total;
 
             if ($existe == 0) {
+
                 // Insertar solo si no existe
-                $db->query("INSERT INTO estudiantes (id, nombre_completo, grupo_id) 
-                VALUES (:nie, :nombre, :grupo_id)");
+                $db->query("INSERT INTO estudiantes (id, nombre_completo, fecha_nacimiento,grupo_id) 
+                VALUES (:nie, :nombre,:fecha_nacimiento, :grupo_id)");
                 $db->bind(':nie', $nie);
                 $db->bind(':nombre', $nombre);
+                $db->bind(':fecha_nacimiento', $birth);
                 $db->bind(':grupo_id', $grupo_id);
 
                 if ($db->execute()) {
