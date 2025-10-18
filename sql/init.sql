@@ -103,6 +103,25 @@ CREATE TABLE IF NOT EXISTS bitacora (
     modulo VARCHAR(50)
 );
 
+--  Tabla de niveles
+CREATE TABLE niveles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla intermedearia 
+
+CREATE TABLE materias_niveles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    materia_id INT NOT NULL,
+    nivel_id INT NOT NULL,
+    FOREIGN KEY (materia_id) REFERENCES materias(id) ON DELETE CASCADE,
+    FOREIGN KEY (nivel_id) REFERENCES niveles(id) ON DELETE CASCADE,
+    UNIQUE KEY (materia_id, nivel_id)  -- evita duplicados
+);
+
 
 DELIMITER //
 
