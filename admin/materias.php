@@ -53,6 +53,26 @@ $materias = $db->resultSet();
 //niveles
 $db->query("SELECT * FROM niveles ORDER BY nombre");
 $niveles = $db->resultSet();
+// Los niveles para el filtro
+$db->query("SELECT * FROM niveles ORDER BY nombre");
+$niveles = $db->resultSet();
+
+// las materias tambien
+$db->query("
+    SELECT 
+        m.id, 
+        m.nombre, 
+        m.descripcion, 
+        m.activa,
+        GROUP_CONCAT(mn.nivel_id) AS niveles_ids,
+        GROUP_CONCAT(n.nombre SEPARATOR ', ') AS niveles
+    FROM materias m
+    LEFT JOIN materias_niveles mn ON m.id = mn.materia_id
+    LEFT JOIN niveles n ON mn.nivel_id = n.id
+    GROUP BY m.id
+    ORDER BY m.nombre
+");
+$materias = $db->resultSet();
 ?>
 
 <!DOCTYPE html>
@@ -122,7 +142,7 @@ $niveles = $db->resultSet();
                             </div>
                         </div>
 
-                       
+
                         <div class="md:col-span-3 flex justify-end mt-4">
                             <button type="submit"
                                 class="bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-600 shadow-md hover:shadow-lg transition duration-200">
@@ -138,7 +158,6 @@ $niveles = $db->resultSet();
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <h3 class="text-2xl font-semibold text-gray-800 border-b pb-2 flex-1">Lista de Materias</h3>
 
-                        <!-- No funciona -->
                         <div class="flex items-center gap-3">
                             <label for="filtro-nivel" class="text-gray-700 font-medium">Filtrar por nivel:</label>
                             <select id="filtro-nivel" class="p-2 border border-gray-300 rounded">
@@ -170,35 +189,40 @@ $niveles = $db->resultSet();
                                     Acciones</th>
                             </tr>
                         </thead>
+
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <?php foreach ($materias as $materia): ?>
-                                <tr data-niveles="<?= $materia->niveles_ids ?? '' ?>"
-                                    class="hover:bg-gray-50 transition duration-150">
-                                    <td class="px-4 py-2"><?= htmlspecialchars($materia->nombre) ?></td>
-                                    <td class="px-4 py-2"><?= htmlspecialchars($materia->descripcion) ?></td>
-                                    <td class="px-4 py-2"><?= htmlspecialchars($materia->niveles ?: '-') ?></td>
-                                    <td class="px-4 py-2">
-                                        <span
-                                            class="px-2 py-1 text-xs rounded-full <?= $materia->activa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
-                                            <?= $materia->activa ? 'Activa' : 'Inactiva' ?>
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-2 flex gap-2">
-                                        <button onclick="abrirModalMateria(<?= $materia->id ?>)"
-                                            class="text-blue-500 hover:text-blue-700">Editar</button>
-                                        <button
-                                            onclick="abrirModalEliminar(<?= $materia->id ?>,'<?= htmlspecialchars($materia->nombre) ?>')"
-                                            class="text-red-500 hover:text-red-700">Eliminar</button>
+                            <?php if (!empty($materias)): ?>
+                                <?php foreach ($materias as $materia): ?>
+                                    <tr data-niveles="<?= $materia->niveles_ids ?? '' ?>"
+                                        class="hover:bg-gray-50 transition duration-150">
+                                        <td class="px-4 py-2"><?= htmlspecialchars($materia->nombre) ?></td>
+                                        <td class="px-4 py-2"><?= htmlspecialchars($materia->descripcion) ?></td>
+                                        <td class="px-4 py-2"><?= htmlspecialchars($materia->niveles ?: '-') ?></td>
+                                        <td class="px-4 py-2">
+                                            <span
+                                                class="px-2 py-1 text-xs rounded-full <?= $materia->activa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
+                                                <?= $materia->activa ? 'Activa' : 'Inactiva' ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-2 flex gap-2">
+                                            <button onclick="abrirModalMateria(<?= $materia->id ?>)"
+                                                class="text-blue-500 hover:text-blue-700">Editar</button>
+                                            <button
+                                                onclick="abrirModalEliminar(<?= $materia->id ?>,'<?= htmlspecialchars($materia->nombre) ?>')"
+                                                class="text-red-500 hover:text-red-700">Eliminar</button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="5" class="px-4 py-2 text-center text-gray-500">No hay materias registradas
                                     </td>
                                 </tr>
-                            <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
-
-
-
 
             <!-- MODAL EDITAR -->
             <div id="modal-editar-materia"
@@ -347,20 +371,25 @@ $niveles = $db->resultSet();
         });
 
 
-        // FILTRO SENCILLO POR NIVELES
-        const filtroNivel = document.getElementById('filtro-nivel');
-        filtroNivel.addEventListener('change', () => {
-            const nivelId = filtroNivel.value;
-            document.querySelectorAll('tbody tr').forEach(row => {
-                const niveles = row.getAttribute('data-niveles').split(',');
-                if (!nivelId || niveles.includes(nivelId)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+        // filtro sencillo
+        document.addEventListener('DOMContentLoaded', () => {
+            const filtroNivel = document.getElementById('filtro-nivel');
+            const filasMaterias = document.querySelectorAll('tbody tr');
+
+            filtroNivel.addEventListener('change', () => {
+                const nivelSeleccionado = filtroNivel.value;
+
+                filasMaterias.forEach(fila => {
+                    const nivelesFila = fila.dataset.niveles ? fila.dataset.niveles.split(',') : [];
+                    if (!nivelSeleccionado || nivelesFila.includes(nivelSeleccionado)) {
+                        fila.style.display = '';
+                        // se ven xd 
+                    } else {
+                        fila.style.display = 'none';
+                    }
+                });
             });
         });
-
     </script>
 
 </body>
